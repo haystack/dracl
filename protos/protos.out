@@ -1,0 +1,21 @@
+\BOOKMARK [1][-]{section.1}{Variables and Notation}{}% 1
+\BOOKMARK [1][-]{section.2}{Obvious PK}{}% 2
+\BOOKMARK [2][-]{subsection.2.1}{Protocol}{section.2}% 3
+\BOOKMARK [2][-]{subsection.2.2}{Costs}{section.2}% 4
+\BOOKMARK [2][-]{subsection.2.3}{Analysis}{section.2}% 5
+\BOOKMARK [1][-]{section.3}{Obvious Shared Secret}{}% 6
+\BOOKMARK [2][-]{subsection.3.1}{Protocol}{section.3}% 7
+\BOOKMARK [2][-]{subsection.3.2}{Costs}{section.3}% 8
+\BOOKMARK [2][-]{subsection.3.3}{Analysis}{section.3}% 9
+\BOOKMARK [1][-]{section.4}{Public Key ACL \(Basic\)}{}% 10
+\BOOKMARK [2][-]{subsection.4.1}{Protocol}{section.4}% 11
+\BOOKMARK [2][-]{subsection.4.2}{Costs}{section.4}% 12
+\BOOKMARK [2][-]{subsection.4.3}{Analysis}{section.4}% 13
+\BOOKMARK [1][-]{section.5}{Public Key ACL \(Per Group\)}{}% 14
+\BOOKMARK [2][-]{subsection.5.1}{Protocol}{section.5}% 15
+\BOOKMARK [2][-]{subsection.5.2}{Costs}{section.5}% 16
+\BOOKMARK [2][-]{subsection.5.3}{Analysis}{section.5}% 17
+\BOOKMARK [1][-]{section.6}{Public Key ACL \(per group, enhanced\)}{}% 18
+\BOOKMARK [2][-]{subsection.6.1}{Protocol}{section.6}% 19
+\BOOKMARK [2][-]{subsection.6.2}{Costs}{section.6}% 20
+\BOOKMARK [2][-]{subsection.6.3}{Analysis}{section.6}% 21

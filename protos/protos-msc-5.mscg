@@ -1,0 +1,11 @@
+msc {
+    a [label="Auth Agent"],
+    c [label="Consumer"],
+    s [label="Service"];
+
+    c -> s [label="Request"];
+    c <- s [label="ACL*r"];
+    c -> s [label="Token XOR r"];
+    c <- s [label="resource"];
+}
+

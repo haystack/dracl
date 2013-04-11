@@ -1,0 +1,223 @@
+% {{{ Preamble
+\documentclass[pdftex,12pt,a4papaer]{article}
+\usepackage[pdftex]{graphicx}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+\usepackage{msctexen}
+\usepackage{hyperref}
+\usepackage{parskip}
+\usepackage{amsmath}
+\usepackage{titling}
+\pagestyle{fancy}
+% }}}
+
+\author{Steven Allen}
+\date{\today}
+\title{Protocols}
+
+% {{{ Header
+\rhead{\thedate}
+\chead{\thetitle}
+\lhead{\theauthor}
+% }}}
+
+\begin{document}
+\maketitle
+
+\hfill
+
+\section{Variables and Notation}
+
+
+\begin{description}
+    \item[R] Number of resources
+    \item[G] Number of groups per person
+    \item[F] Number of friends per person
+    \item[S] Number of services
+    \item[A] Average number of groups per resource
+    \item[c] Request rate
+    \item[g] Group change rate
+    \item[g] Group change rate
+\end{description}
+
+\pagebreak
+
+\section{Obvious PK} %{{{
+
+\subsection{Protocol}
+
+\begin{msc}
+msc {
+    a [label="Auth Agent"],
+    c [label="Consumer"],
+    s [label="Service"];
+
+    c -> s [label="Request"];
+    c <- s [label="Ea(res, skey, r)"];
+    a <- c [label="Ea(res, skey, r), cid"];
+    a -> c [label="Ec(Es(Sa(res, access?, r)))"];
+    c -> s [label="Es(Sa(res, access?, r))"];
+    c <- s [label="resource"];
+}
+\end{msc}
+
+\subsection{Costs}
+
+\begin{tabular}{l|l|l|l}
+ Op & Auth Agent & Consumer & Service \\ \hline
+ Encryption & $\Theta(c)$ & $\Theta(c)$ & $\Theta(c)$ \\
+    Storage & $\Theta(RG+RS)$ & $\Theta(1)$ & $\Theta(R)$ \\
+    Transfer & $\Theta(c)$ & $\Theta(c)$ & $\Theta(c)$
+\end{tabular}
+
+\subsection{Analysis}
+
+Perfect privacy.
+
+\pagebreak
+%}}}
+
+\section{Obvious Shared Secret}  %{{{
+
+\subsection{Protocol}
+
+\begin{msc}
+msc {
+    a [label="Auth Agent"],
+    c [label="Consumer"],
+    s [label="Service"];
+
+    c -> s [label="Request"];
+    c <- s [label="Es(res, r)"];
+    a <- c [label="Ec(Es(res, r))"];
+    a -> c [label="Ec(Es(res, access?, r))"];
+    c -> s [label="Es(res, access?, r)"];
+    c <- s [label="resource"];
+}
+\end{msc}
+
+\subsection{Costs}
+
+\begin{tabular}{l|l|l|l}
+ Op & Auth Agent & Consumer & Service \\ \hline
+ Encryption & $\Theta(c)$ & $\Theta(c)$ & $\Theta(c)$ \\
+    Storage & $\Theta(RG+RS)$ & $\Theta(F)$ & $\Theta(R)$ \\
+    Transfer & $\Theta(c)$ & $\Theta(c)$ & $\Theta(c)$
+\end{tabular}
+
+\subsection{Analysis}
+
+Perfect privacy.
+
+\pagebreak
+%}}}
+
+\section{Public Key ACL (Basic)}  %{{{
+
+\subsection{Protocol}
+
+\begin{msc}
+msc {
+    a [label="Auth Agent"],
+    c [label="Consumer"],
+    s [label="Service"];
+
+    c -> s [label="Request"];
+    c <- s [label="ACL"];
+    c -> s [label="Token"];
+    c <- s [label="resource"];
+}
+\end{msc}
+
+\subsection{Costs}
+
+\begin{tabular}{l|l|l|l}
+ Op & Auth Agent & Consumer & Service \\ \hline
+ Encryption & $\Theta(g)$ & $\Theta(rA)$ & $0$ \\
+    Storage & $\Theta(GA)$ & $\Theta(1)$ & $\Theta(RA)$ \\
+    Transfer & $\Theta(g)$ & $\Theta(rA)$ & $\Theta(rA)$
+\end{tabular}
+
+\subsection{Analysis}
+
+The ACL is of the form: $\{E_{c_1}(t), E_{c_2}(t), ...\}$. Consumers are able to
+determine the size of the ACL group.
+
+\pagebreak
+%}}}
+
+\section{Public Key ACL (Per Group)}  %{{{
+
+\subsection{Protocol}
+
+\begin{msc}
+msc {
+    a [label="Auth Agent"],
+    c [label="Consumer"],
+    s [label="Service"];
+
+    c -> s [label="Request"];
+    c <- s [label="ACL"];
+    c -> s [label="Token"];
+    c <- s [label="resource"];
+}
+\end{msc}
+
+\subsection{Costs}
+
+\begin{tabular}{l|l|l|l}
+ Op & Auth Agent & Consumer & Service \\ \hline
+ Encryption & $\Theta(g)$ & $\Theta(rA)$ & $0$ \\
+    Storage & $\Theta(GA)$ & $\Theta(1)$ & $\Theta(GA)$ \\
+   Transfer & $\Theta(g)$ & $\Theta(rA)$ & $\Theta(rA)$
+\end{tabular}
+
+
+\subsection{Analysis}
+
+Both the consumers and the services are able to group content.
+
+\pagebreak
+%}}}
+
+\section{Public Key ACL (per group, enhanced)}  %{{{
+
+\subsection{Protocol}
+
+\begin{msc}
+msc {
+    a [label="Auth Agent"],
+    c [label="Consumer"],
+    s [label="Service"];
+
+    c -> s [label="Request"];
+    c <- s [label="ACL*r"];
+    c -> s [label="Token XOR r"];
+    c <- s [label="resource"];
+}
+\end{msc}
+
+\subsection{Costs}
+
+\begin{tabular}{l|l|l|l}
+ Op & Auth Agent & Consumer & Service \\ \hline
+ Encryption & $\Theta(g)$ & $\Theta(rA)$ & $0$ \\
+    Storage & $\Theta(GA)$ & $\Theta(1)$ & $\Theta(GA)$ \\
+    Transfer & $\Theta(g)$ & $\Theta(rA)$ & $\Theta(rA)$
+\end{tabular}
+
+\subsection{Analysis}
+
+Using Goldwasser-Micali for pk encryption, compute $r*\text{ACL} = \{E_{c_1}(t
+\oplus r), E_{c_2}(t \oplus r),...\}$. This allows us to hide the group from the
+consumer.
+
+With this encryption scheme, the consumers can't group content but the server
+still can.
+
+\pagebreak
+%}}}
+
+\end{document}
+% vim: set foldmethod=marker: %
+

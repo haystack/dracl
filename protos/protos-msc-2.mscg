@@ -1,0 +1,13 @@
+msc {
+    a [label="Auth Agent"],
+    c [label="Consumer"],
+    s [label="Service"];
+
+    c -> s [label="Request"];
+    c <- s [label="Es(res, r)"];
+    a <- c [label="Ec(Es(res, r))"];
+    a -> c [label="Ec(Es(res, access?, r))"];
+    c -> s [label="Es(res, access?, r)"];
+    c <- s [label="resource"];
+}
+

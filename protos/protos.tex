@@ -26,7 +26,7 @@
 
 \hfill
 
-\section{Variables and Notation}
+\section{Analysis Variables}
 
 
 \begin{description}
@@ -34,10 +34,10 @@
     \item[G] Number of groups per person
     \item[F] Number of friends per person
     \item[S] Number of services
-    \item[A] Average number of groups per resource
-    \item[c] Request rate
+    \item[M] Average members per group
+    \item[r] Request rate
     \item[g] Group change rate
-    \item[g] Group change rate
+    \item[p] Resource post rate
 \end{description}
 
 \pagebreak
@@ -65,9 +65,9 @@ msc {
 
 \begin{tabular}{l|l|l|l}
  Op & Auth Agent & Consumer & Service \\ \hline
- Encryption & $\Theta(c)$ & $\Theta(c)$ & $\Theta(c)$ \\
+ Encryption & $\Theta(r)$ & $\Theta(r)$ & $\Theta(r)$ \\
     Storage & $\Theta(RG+RS)$ & $\Theta(1)$ & $\Theta(R)$ \\
-    Transfer & $\Theta(c)$ & $\Theta(c)$ & $\Theta(c)$
+    Transfer & $\Theta(r)$ & $\Theta(r)$ & $\Theta(r)$
 \end{tabular}
 
 \subsection{Analysis}
@@ -100,9 +100,9 @@ msc {
 
 \begin{tabular}{l|l|l|l}
  Op & Auth Agent & Consumer & Service \\ \hline
- Encryption & $\Theta(c)$ & $\Theta(c)$ & $\Theta(c)$ \\
+ Encryption & $\Theta(r)$ & $\Theta(r)$ & $\Theta(r)$ \\
     Storage & $\Theta(RG+RS)$ & $\Theta(F)$ & $\Theta(R)$ \\
-    Transfer & $\Theta(c)$ & $\Theta(c)$ & $\Theta(c)$
+    Transfer & $\Theta(r)$ & $\Theta(r)$ & $\Theta(r)$
 \end{tabular}
 
 \subsection{Analysis}
@@ -133,9 +133,9 @@ msc {
 
 \begin{tabular}{l|l|l|l}
  Op & Auth Agent & Consumer & Service \\ \hline
- Encryption & $\Theta(g)$ & $\Theta(rA)$ & $0$ \\
-    Storage & $\Theta(GA)$ & $\Theta(1)$ & $\Theta(RA)$ \\
-    Transfer & $\Theta(g)$ & $\Theta(rA)$ & $\Theta(rA)$
+ Encryption & $\Theta(g)$ & $\Theta(rM)$ & $0$ \\
+    Storage & $\Theta(GM)$ & $\Theta(1)$ & $\Theta(RM)$ \\
+    Transfer & $\Theta(g)$ & $\Theta(rM)$ & $\Theta(rM)$
 \end{tabular}
 
 \subsection{Analysis}
@@ -167,9 +167,9 @@ msc {
 
 \begin{tabular}{l|l|l|l}
  Op & Auth Agent & Consumer & Service \\ \hline
- Encryption & $\Theta(g)$ & $\Theta(rA)$ & $0$ \\
-    Storage & $\Theta(GA)$ & $\Theta(1)$ & $\Theta(GA)$ \\
-   Transfer & $\Theta(g)$ & $\Theta(rA)$ & $\Theta(rA)$
+ Encryption & $\Theta(g)$ & $\Theta(rM)$ & $0$ \\
+    Storage & $\Theta(GM)$ & $\Theta(1)$ & $\Theta(GM)$ \\
+   Transfer & $\Theta(g)$ & $\Theta(rM)$ & $\Theta(rM)$
 \end{tabular}
 
 
@@ -201,9 +201,9 @@ msc {
 
 \begin{tabular}{l|l|l|l}
  Op & Auth Agent & Consumer & Service \\ \hline
- Encryption & $\Theta(g)$ & $\Theta(rA)$ & $0$ \\
-    Storage & $\Theta(GA)$ & $\Theta(1)$ & $\Theta(GA)$ \\
-    Transfer & $\Theta(g)$ & $\Theta(rA)$ & $\Theta(rA)$
+ Encryption & $\Theta(g)$ & $\Theta(rM)$ & $0$ \\
+    Storage & $\Theta(GM)$ & $\Theta(1)$ & $\Theta(GM)$ \\
+    Transfer & $\Theta(g)$ & $\Theta(rM)$ & $\Theta(rM)$
 \end{tabular}
 
 \subsection{Analysis}
@@ -218,6 +218,65 @@ still can.
 \pagebreak
 %}}}
 
+\section{El-Gamal Variant}  %{{{
+
+\subsection{Protocol}
+
+\begin{msc}
+msc {
+    a [label="Auth Agent"],
+    c [label="Consumer"],
+    s [label="Service"];
+
+    c -> s [label="Request"];
+    c <- s [label="Encrypted Token"];
+    a abox c [label="(Update group keys)"];
+    c -> s [label="Decrypted Token"];
+    c <- s [label="resource"];
+}
+\end{msc}
+
+\subsection{Costs}
+
+\begin{tabular}{l|l|l|l}
+ Op & Auth Agent & Consumer & Service \\ \hline
+    Encryption & $\Theta(p+g)$ & $\Theta(r)$ & $\Theta(r+p)$ \\
+    Storage & $\Theta(GM)$ & $\Theta(GF)$ & $\Theta(R)$ \\
+    Transfer & $\Theta(g+p)$ & $\Theta(r)$ & $\Theta(r+p)$
+\end{tabular}
+
+\subsection{Description}
+
+This scheme uses a variant of ElGamal that allows for multiple uncorrelatable
+(to be proven) public keys per private key.
+
+A loose description of the encryption scheme follows (there are a few other
+requirements but are not necessary to get the gist of it).
+
+The consumer key consists of two parameters: $x, w$.  The service keys are
+defined as $g^{ax}, g^{a-w}$ where $a$ is chosen randomly and uniquely per
+resource posted. Under this scheme, encryption is defined as $E_a(m) = (g^r,
+g^{ar-wr}, mg^{axr}) = (j,k,l)$ and decryption is defined as $D_a(j, k, l) =
+l/(kj^w)^x$.
+
+The token that the service sends the consumer is $E_a(m)$, and the decrypted
+token is $m$.
+
+To prevent man-in-the-middle attacks, $m$ should encode information about the
+server requesting authentication (IP address, a hash of their SSL key, etc).
+
+Also, as ElGamal (and therefore this scheme) is malleable, the message will have
+to be properly padded to ensure that it isn't modified.
+
+\section{Privacy Analysis}
+
+In this system, the server is unable to identify users, or even which groups
+guard a piece of content. However, users are able to tell if they are in the
+same group by comparing private group keys. Unfortunately, I was unable to come
+up with a way around this.
+
+\pagebreak
+%}}}
 \end{document}
 % vim: set foldmethod=marker: %
 

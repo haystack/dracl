@@ -1,0 +1,7 @@
+_minted-*
+*.out
+*.aux
+*.log
+*.bbl
+*.blg
+*.ent

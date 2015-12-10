@@ -150,8 +150,6 @@ authentication and access control scheme.
 Any security system that gets in users way is doomed from the start. Therefore,
 DRACL aims to be user friendly and unobtrusive.
 
-\begin{comment}
-
 \section{Related Work and Motivation}
 
 This section discusses related work, existing systems, and the motivation behind
@@ -172,16 +170,16 @@ There are five categories of authentication and access control systems:
 
 The vast majority of websites today force users to create site-specific
 accounts. This is a poor solution to the access control problem for both users
-and the websites because it adds unnecessary overhead, privacy concerns, and
+and websites because it adds unnecessary overhead, privacy concerns, and
 security hazards.
 
 Site specific accounts add unnecessary overhead because they force websites to
 implement custom account/access control systems and force users to create new
-accounts for every site they use. While there are many plug-and-play authentication
-solutions, they still force the website to either manually create or implement a
-system for creating user accounts. DRACL will avoid this by allowing users to
-create a single account with a single authentication agent for use on multiple
-websites.
+accounts for every site they use. While there are many plug-and-play
+authentication solutions, they still force the website to either manually create
+or implement a system for creating user accounts. DRACL will avoid this by
+allowing users to create a single account with a single Authentication Provider for
+use on multiple websites.
 
 The site specific account system as an access control mechanism is a privacy
 hazard because it forces content publishers to reveal their social networks.
@@ -250,8 +248,6 @@ UMA\cite{uma} \cite{drbac} and \cite{socnet} provide a more thorough system
 designs (UMA even provides a system specification) but all fail to even address
 the question of user privacy.
 
-\end{comment}
-
 \section{Design Proposal}
 
 This section describes the core design and does not include concrete APIs. To
@@ -306,7 +302,7 @@ distribute them using her AP (described in the next section).
 
 \subsection{Authentication Provider (AP)}
 
-The authentication provider (AP) is simply our way to deal with the fact that
+The Authentication Provider (AP) is simply our way to deal with the fact that
 publishers and consumers aren't always online and, even when they are, they are
 often hidden behind firewalls. The AP will host consumer keys, issue
 certificates of membership (as described in the Groups and Authentication 2.0
@@ -713,7 +709,7 @@ This document will not discuss the specifics of the API for communication
 between consumers, publishers, and APs. While important, the design of this API
 will be driven by implementation needs and is not an API that can be reasonably
 designed in advance. Additionally, this API will only impact browser authors and
-authentication providers so, while important, it doesn't have to be elegant.
+Authentication Providers so, while important, it doesn't have to be elegant.
 
 \subsection{Web Server Plugin APIs}
 
@@ -754,7 +750,7 @@ communicate with Authentication Providers to retrieve organization membership
 certificates. As this organization certificate system is modeled after Kerberos,
 its performance characteristics should be similar.
 
-Producers only need to contact their authentication agents when modifying their
+Producers only need to contact their Authentication Providers when modifying their
 friend-list so the \emph{overhead} should be zero. That is, managing a
 friend-list always requires communication and DRACL doesn't add any additional
 communication requirements.

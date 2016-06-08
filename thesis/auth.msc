@@ -1,0 +1,16 @@
+msc {
+    c [label="Consumer"],h [label="Content Host"], a [label="AP"];
+
+    c => h [label="Request Content"];
+    c << h [label="Authenticate [ACL]"];
+    ...;
+    --- [label="If [Secret Key] not cached, fetch from owner's AP"];
+    ...;
+    c box c [label="Generate [Setup Material] from [Secret Key]"];
+    c => h [label="[Setup Material]"];
+    h box h [label="Generate [Challenge] from [ACL] and [Setup Material]"];
+    c << h [label="[Challenge]"];
+    c box c [label="Generate [Proof] from [Challenge] and [Secret Key]"];
+    c => h [label="[Proof] or Cancel"];
+    c << h [label="[Content] or Access Denied"];
+}

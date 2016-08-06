@@ -5,3 +5,11 @@ _minted-*
 *.bbl
 *.blg
 *.ent
+_region_*
+*-converted-to*
+auto/
+*.fdb_latexmk
+*.fls
+*.pyg
+*.syntex.gz
+*.toc

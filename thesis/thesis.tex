@@ -128,16 +128,23 @@ for anything for that matter. The amount of invasive advertising, poor software,
 and privacy violations people tend to put up with on the internet for ``free''
 services is a testament to how far people will go to avoid paying.
 
+Additionally, we can't assume that we can build a perfect implementation.
+No practical, complex system can hope to achieve perfect security and perfect
+uptime. At the end of the day, this system will be built and maintained by
+humans so we must design it with that in mind.
+
+%% TODO MOVE THIS DOWN vvv
+
 Additionally, we can't expect some third party to run a perfectly secure server
-capable of handling access control checks in real-time with no downtime. In a
-perfect world, it would be possible for such a server to exist; as a matter of
-fact, a few such servers could probably service the entire internet. As
-reasonable approximation, assume the same number of daily users as
+capable of handling access control checks in real-time with no downtime for
+free. In a perfect world, it would be possible for such a server to exist; as a
+matter of fact, a few such servers could probably service the entire internet.
+As reasonable approximation, assume the same number of daily users as
 Facebook\texttrademark{} (1.13B) use DRACL and that they make at most 100 access
 control requests per day. This gives us an upper bound 1.3M requests per second
 assuming these requests are evenly spread out over the course of the day. A
-small set of powerful servers (less than 5) could handle this load. 
-Unfortunately, the real world doesn't work this way:
+small set of optimized, powerful servers (less than 5) could conceivably handle
+this load. Unfortunately, the real world doesn't work this way:
 
 \begin{enumerate}
 \item Traffic is bursty. Access requests aren't going to be spread out evenly
@@ -145,9 +152,9 @@ Unfortunately, the real world doesn't work this way:
   for the entire internet all at the same time. Worse, extremely high load tends
   to trigger race latent conditions and deadlocks. Furthermore, load that
   exceeds capacity will cause a lot of request to be dropped and retried which
-  will amplify congestion.
-\item Perfect uptime is nearly impossible; not even Gmail\texttrademark has
-  perfect uptime. If DRACL ever goes down, all access control on the internet
+  will amplify congestion. Basically, we'd need more like 1000 powerful servers
+  which becomes expensive.
+\item Perfect uptime is nearly impossible; If DRACL ever goes down, all access control on the internet
   would abruptly stop working. Given that we can't get users to pay for this
   service and we can't sell their personal information (we care about privacy),
   achieving even close to perfect uptime is well beyond our reach.
@@ -156,6 +163,10 @@ Unfortunately, the real world doesn't work this way:
     this statement confusing?} Therefore, we can't afford to rely on a
   centralized fully-trusted entity.
 \end{enumerate}
+
+Given that we can't charge but need money to run this system.
+
+%%% END
 
 This means that any third party servers that DRACL depends can't be in the
 hot-path and can't be fully trusted.
@@ -181,6 +192,15 @@ Second, no compromise of any single party should be unrecoverable and no
 compromise of any single party should bring down the entire system. Websites are
 hacked all the time and user account compromise is common so any system that
 can't recover from compromise is dead in the water.
+
+Finally, only authorized consumers should be able to access content, no trusted
+third parties. Currently, if someone were to hack Gmail, they'd be able to
+access pretty much everything on the public internet (through, e.g., password
+reset emails). This was a mistake. From a security perspective, it's terrifying.
+From a business perspective, it's a unacceptable liability. No sane,
+well-intentioned party wants that much power; this is why Facebook, Google, etc.
+are pushing for end-to-end encryption. Therefore, we want to design DRACL to
+avoid this problem from the ground up.
 
 \subsection{Privacy Preserving}
 
@@ -275,10 +295,31 @@ of more money. See AT\&T\texttrademark{}\cite{att} policy and
 Comcast's\texttrademark{}\cite{comcast} recent attempt to charge an additional
 fee for not snooping on their customers browser history.
 
-\section{Why DRACL} 
+\section{Design Space And Related Work} 
 
-Given the goals stated in the previous section, this section explains why we
-need DRACL. That is, why none of the other related systems are sufficient.
+Given the goals stated in the previous section, this section explores the design
+space and existing systems and explains why we need DRACL.
+
+\subsection{Bearer Credentials}
+
+Before going into real access control systems, we need to mention an obvious
+solution: bearer credentials. You've almost definitely run across them, usually
+in the form of ``secret'' links. That is, if you know the link, you can access
+the resource.
+
+One could conceivably build an entire access control system out of bearer
+credentials. Unfortunately, most bearer credentials provide no simple way of
+revoking access; you can't just take back a link. They also tend to be easy to
+loose or accidentally give away (i.e., make public).
+
+Some systems like Google's Macaroons~\cite{macaroon} fix these problems by
+issuing short-lived bearer credentials that can optionally require the bearer to
+prove knowledge of some additional key. Macaroons even support delegation.
+However, being short lived, we'd still need to design a system for issuing and
+managing Macaroons.
+
+In short, bearer credentials are a useful component of access control systems
+but don't really solve the problem.
 
 \subsection{Identity Systems}
 
@@ -294,7 +335,7 @@ this privacy issue sufficiently motivates an alternative design, we have
 included this section to give an overview of some common existing systems and to
 learn from their shortcomings (in addition to the privacy problem).
 
-\subsection{Site Specific Identity}
+\subsubsection{Site Specific Identity}
 
 The vast majority of content hosts today force users to create site-specific
 accounts. This is a poor solution to the access control problem for both users
@@ -334,24 +375,24 @@ use weak passwords~\cite{ms-passwords}.
 % and reducing the number of credentials that users have to manage to one (the one
 % they need to authenticate to their AP).
 
-\subsection{Centralized Identity}
+\subsubsection{Centralized Identity}
 
 Centralized identity systems, such as those provided by Google and Facebook,
 allow users to identify to multiple sites using a single set of credentials.
 These systems therefore solve all of the security problems we mentioned in the
 site specific password section as users only have one set of credentials managed
 by a single, hopefully competent, entity. They also solve the associated
-usability problems of having to remember multiple passwords.
+usability problem of users having to remember multiple passwords.
 
 While centralized identity systems sometimes increase usability by allowing
 users to carry their social networks with them to content hosts (e.g. Facebook),
-they don't provide a way to do so while maintaining privacy. That is, for one
+they can't provide a way to do so while maintaining privacy. That is, for one
 user to allow another user to access a resource on a content host, the first
 user must identify the second user to the content host. This is a fundamental
 problem with identity systems because they operate on the level of identity.
 
 Again, because these systems operate on identities, they force content hosts to
-implement their custom access control systems which, again, violates our stated
+implement their own access control systems which, again, violates our stated
 goals. Content hosts shouldn't have to reinvent the wheel.
 
 Finally, because these systems are centralized, users are forced to choose
@@ -360,48 +401,47 @@ hosts are forced to support whatever identity systems happen to be in vogue at
 the time.\todo{This should probably also be mentioned in the goals. Does it go
   under privacy or user friendly?}
 
-\subsection{Decentralized Identity}
+\subsubsection{Decentralized Identity}
 
 Decentralized identity systems such as OpenID~\cite{openid},
 Persona~\cite{persona}, and WebID~\cite{webid} allow users to identify to
 multiple services using the same credentials but, unlike centralized identity
 systems, decentralized identity systems do not force users to choose
 between a few ``accepted'' providers. Additionally, in theory, content hosts
-should be able to support exactly one decentralized identity system assuming
-they eventually converge. While decentralized identity addresses the user choice
-concern, it still doesn't address the our privacy concerns because it still
-operates on the level of identity.
+should be able to support exactly one decentralized identity system --- assuming
+they eventually converge. While decentralized identity systems address the user
+choice concern, they still don't address our privacy concerns because they still
+operate on the level of identity.
 
-\section{Access Control Systems}
+\subsection{Access Control Systems}
 
 Unlike identity systems, access control systems directly dictate what operations
 a system should and should not permit. Where an identity system answers the
 question ``Does <PROOF> imply that <CLIENT> is <IDENTITY>?'', access control systems
 answer the question ``Does <PROOF> imply that <CLIENT> has <PERMISSION>?''. In our
-case, ``<PERMISSION>'' is usually ``can access <CONTENT>''.
+case, ``<PERMISSION>'' is usually ``can access <CONTENT>''. This categorically
+addresses our usability concerns with identity systems because the entire social
+network is now defined in by a unified system. Unfortunately, there aren't any
+existing access control systems that address our privacy and security concerns.
 
-These systems categorically address the usability problems present in identity
-systems.
-
-\subsection{Centralized Access Control}
+\subsubsection{Centralized Access Control}
 
 Centralized access control systems such as Kerberos~\cite{kerberos} and
 LDAP~\cite{ldap} allow services to offload user/group management to third
-parties (the access control provider). This solves the some of the  problems noted
-in the centralized identity section because the social network is now defined in
-a centralized system (the access control system). However, it makes the
-centralization problem much worse because, while content hosts can allow
-different users to authenticate with different centralized authentication
-services, they cannot allow users to choose their own centralized access control
-services without partitioning the social network by access control service
-because the access control services don't interoperate.
+parties (the access control provider). While, as noted above, this solves the
+usability problems in centralized identity systems, it makes the centralization
+problem much worse. While content hosts can allow different users to
+authenticate with different centralized authentication services, they cannot
+allow users to choose their own centralized access control service without
+partitioning the social network because, by definition, centralized access
+control services don't interoperate.
 
-\subsection{Decentralised Access Control}
+\subsubsection{Decentralised Access Control}
 
-Decentralized access control systems such as the one proposed in this document
-offer the same benefits as centralized access control systems but without the
-drawbacks of being a centralized system. That is, users can freely choose
-between providers or run their own. 
+Decentralized (federated, really) access control systems offer the same benefits
+as centralized access control systems but without the drawbacks of being a
+centralized system. That is, users can freely choose between providers or run
+their own.
 
 Other systems have attempted to address this problem including \cite{attrib}
 \cite{privattrib} \cite{drbac} \cite{socnet} and the Kerberos Consortium's User
@@ -409,27 +449,18 @@ Managed Access (UMA)~\cite{uma}. Unfortunately, while both \cite{attrib} and
 \cite{privattrib} describe cryptographic protocols for privacy preserving
 decentralized access control, neither attempt to design an implementable system.
 UMA\cite{uma} \cite{drbac} and \cite{socnet} provide a more thorough system
-designs (UMA even provides a system specification) but all fail to even address
-the question of user privacy.
+designs (UMA even provides a system specification) but all (1) fail to even address
+the question of user privacy and (2) completely trust a third party access
+control provider (e.g., UMA).
 
-\subsection{Bearer Credentials}
+Now we're in uncharted territory. So far, we've decided that we need an access
+control system, not an identity system, and would like it to be federated.
+Additionally, we want it to be privacy preserving.
 
-TODO: Secret URLs, Macaroons (Google, 2014).
-
-\begin{comment}
-
-Macaroons:
-Pros:
-* Simple
-* Easy delegation. This is actually *very nice*.
-
-Cons:
-* Easy delegation
-* One ``token'' per content.
-* No anonymity.
-* Policies are not hidden.
-\end{comment}
-
+% The obvious solution is to define a system where 
+% control server and 
+% my content, please ask my ACL server if they should be granted access.
+% Unfortunately, this makes the 
 
 \section{Design Overview}
 
@@ -552,144 +583,6 @@ ones made with the new key as this would require additional work for content
 hosts. Instead, they continue to distribute one consumer key for each keypair
 ever used. While these old keys could have been compromised, we assume that the
 secondary key controlled by the AP has not been so this is still secure.
-
-%\chapter{Related Work and Motivation} 
-%
-%\section{Identity Systems}
-%
-%The most common access control scheme is to assign one or more unique identities
-%to all agents and then have all content hosts record which identities have
-%access to what. We call these identity systems because, while access control
-%systems can be built on top of them, they don't inherently provide access
-%control as a feature.
-%
-%This type of system is inherently bad for privacy because content hosts learn
-%the identities of who has access to what and, by extension, who knows who. While
-%this privacy issue sufficiently motivates an alternative design, we have
-%included this section to give an overview of some common existing systems and to
-%learn from their shortcomings (in addition to the privacy problem).
-%
-%\subsection{Site Specific Identity}
-%
-%The vast majority of content hosts today force users to create site-specific
-%accounts. This is a poor solution to the access control problem for both users
-%and content hosts because it adds unnecessary usability and deployability
-%overhead and introduces security hazards.
-%
-%\todo{talk about taking social networks with you.}
-%
-%From a usability standpoint, site-specific accounts force users to create new
-%accounts and replicate their social networks on every content host they use.
-%DRACL avoids the first problem by allowing users to create a single account with
-%a single Authentication Provider for use on multiple content hosts. It avoids
-%the second problem by handling access control on behalf of the content host.
-%
-%From a deployability standpoint, site-specific accounts force content hosts to
-%implement custom account/access control systems and make it harder to attract
-%new users. DRACL solves the first problem by allowing content hosts to focus on
-%whether or not an operation should be permitted instead of messing around with
-%identities.
-%
-%Site specific accounts are a security hazard because content hosts are
-%notoriously bad at safely storing credentials and users are notoriously bad at
-%choosing/remembering safe passwords. Because of this, content hosts often store
-%user credentials in the clear~\cite{plaintext} and users often reuse passwords
-%and/or use weak passwords~\cite{ms-passwords}. DRACL reduces these security
-%hazards by restricting credential checking to APs and reducing the number of
-%credentials that users have to manage to one (the one they need to authenticate
-%to their AP).
-%
-%\subsection{Centralized Identity}
-%
-%Centralized identity systems, such as those provided by Google and Facebook,
-%allow users to identify to multiple sites using a set of credentials. These
-%systems therefore solve all of the security present in site-specific identity
-%systems as users only have one set of credentials. They also solve the
-%associated usability problems of having to remember multiple passwords.
-%
-%While centralized identity systems sometimes increase usability by allowing
-%users to carry their social networks with them to content hosts (e.g. Facebook),
-%they don't provide a way to do so while maintaining privacy. That is, for one
-%user to allow another user to access a resource on a content host, the first
-%user must identify the second user to the content host. This is a fundamental
-%problem with identity systems because they operate on the level of identity.
-%DRACL fixes this problem because it operates on the level of access control.
-%
-%Again, because these systems operate on identities, they force content hosts to
-%implement their own access control systems. DRACL, on the other hand, provides
-%access control out of the box.
-%
-%Finally, because these systems are centralized, users are forced to choose
-%between a few ``accepted'' providers and can't run their their own and content
-%hosts are forced to support whatever identity systems happen to be in vogue at
-%the time.
-%
-%\subsection{Decentralized Identity}
-%
-%Decentralized identity systems such as OpenID~\cite{openid},
-%Persona~\cite{persona}, and WebID~\cite{webid} allow users to identify to
-%multiple services using the same credentials but, unlike centralized identity
-%systems, decentralized identity systems do not force users to choose
-%between a few ``accepted'' providers. Additionally, in theory, content hosts
-%should be able to support exactly one decentralized identity system assuming
-%they eventually converge. While decentralized identity addresses the user choice
-%concern, it still doesn't address the privacy concern because, again, it
-%operates on the level of identities.
-%
-%\section{Access Control Systems}
-%
-%Unlike identity systems, access control systems directly dictate what operations
-%a system should and should not permit. Where an identity system answers the
-%question ``Does PROOF imply that CLIENT is IDENTITY?'', access control systems
-%answer the question ``Does PROOF imply that CLIENT has PERMISSION?''. In our
-%case, ``PERMISSION'' is usually ``can access CONTENT''.
-%
-%\subsection{Centralized Access Control}
-%
-%Centralized access control systems such as Kerberos~\cite{kerberos} and
-%LDAP~\cite{ldap} allow services to offload user/group management to third
-%parties (the access control provider). This solves the some of the  problems noted
-%in the centralized identity section because the social network is now defined in
-%a centralized system (the access control system). However, it makes the
-%centralization problem much worse because, while content hosts can allow
-%different users to authenticate with different centralized authentication
-%services, they cannot allow users to choose their own centralized access control
-%services without partitioning the social network by access control service
-%because the access control services don't interoperate.
-%
-%\subsection{Decentralised Access Control}
-%
-%Decentralized access control systems such as the one proposed in this document
-%offer the same benefits as centralized access control systems but without the
-%drawbacks of being a centralized system. That is, users can freely choose
-%between providers or run their own. 
-%
-%Other systems have attempted to address this problem including \cite{attrib}
-%\cite{privattrib} \cite{drbac} \cite{socnet} and the Kerberos Consortium's User
-%Managed Access (UMA)~\cite{uma}. Unfortunately, while both \cite{attrib} and
-%\cite{privattrib} describe cryptographic protocols for privacy preserving
-%decentralized access control, neither attempt to design an implementable system.
-%UMA\cite{uma} \cite{drbac} and \cite{socnet} provide a more thorough system
-%designs (UMA even provides a system specification) but all fail to even address
-%the question of user privacy.
-%
-%\subsection{Bearer Credentials}
-%
-%TODO: Secret URLs, Macaroons (Google, 2014).
-%
-%\begin{comment}
-%
-%Macaroons:
-%Pros:
-%* Simple
-%* Easy delegation. This is actually *very nice*.
-%
-%Cons:
-%* Easy delegation
-%* One ``token'' per content.
-%* No anonymity.
-%* Policies are not hidden.
-%\end{comment}
 
 \chapter{Discussion}
 

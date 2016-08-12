@@ -471,6 +471,14 @@ AP, gets the certificate, and returns it to the content host. As a matter of
 fact, most access control services, including the Kerberos Consortium's User
 Managed Access (UMA)~\cite{uma}, operate this way.
 
+Unfortunately, by introducing crypto into the protocol, we've made it
+significantly harder to recover from system compromise violating our no
+compromise of any single party should be unrecoverable requirement. In the first
+attempt protocol, there were no secrets --- not in the protocol itself, at
+least. However, by adding crypto, we've introduced secrets. Now, if these
+secrets are leaked, we'll need a way of invalidating them. We'll fix this later
+but you should keep it in mind.
+
 \subsection{Distribute The Storage}
 
 Unfortunately, there's another problem with this system as described: the access
@@ -499,10 +507,13 @@ functional encryption.
 
 Using some fancy crypto, publishers can give their APs virtual black boxes
 that, given user ID and a specially constructed ACL, can construct a certificate
-usable only by the given user if and only if they are listed in the ACL.
-Unfortunately, this isn't without drawbacks: this crypto is \emph{very}
-computationally expensive. We've exchanged no expensive computation by third
-parties for no third parties with perfect security requirements.
+usable only by the given consumer --- using some consumer-specific secret --- if
+and only if they are listed in the ACL. Unfortunately, this isn't without
+drawbacks: this crypto is \emph{very} computationally expensive. We've exchanged
+no expensive computation by third parties for no third parties with perfect
+security requirements. We also still haven't addressed the ``no unrecoverable
+compromises'' requirement. Instead, we've just moved the secrets from the APs to
+the publisher.
 
 \subsection{Distribute The Load}
 
@@ -523,47 +534,58 @@ the more load we put on the AP and the less downtime we can tolerate.
 
 \subsection{Checks And Balances}
 
-Finally, we have one remaining goal: no compromise of any single party should be
-unrecoverable. Currently, if either the consumer or the publisher is
-compromised 
+Finally, we can fix the ``no compromise of any single party should be
+unrecoverable'' problem by using a two-key system. Basically, instead of having
+consumers use a single black box, we have them use two: one created by the
+publisher --- as before --- and one created by the AP. To access a piece of
+content, consumers use both black boxes to generate and present two certificates
+to the content host; having one isn't sufficient. This means that neither the
+publisher nor the AP have enough information to make the black boxes to make the
+certificates so compromising one but not the other isn't sufficient to
+compromise the system. However, this isn't without drawbacks.
 
-The solution is painfully obvious: don't trust any single party
-by itself. That is,
+For one, up until now the publisher's AP didn't necessarily need to know the
+structure of the publisher's social network. However, they need this information
+to create the black boxes.
 
-TODO: ....
+Additionally, this doubles the crypto. Remember, the crypto necessary to extract
+certificates from these black boxes is computationally intensive. We've just
+doubled that load by demanding two certificates from two black boxes.
+Fortunately, this crypto is done on the consumer's personal computer which isn't
+likely to be latency sensitive.
 
-%Additionally, we can't expect some third party to run a perfectly secure server
-%capable of handling access control checks in real-time with no downtime for
-%free. In a perfect world, it would be possible for such a server to exist; as a
-%matter of fact, a few such servers could probably service the entire internet.
-%As reasonable approximation, assume the same number of daily users as
-%Facebook\texttrademark{} (1.13B) use DRACL and that they make at most 100 access
-%control requests per day. This gives us an upper bound 1.3M requests per second
-%assuming these requests are evenly spread out over the course of the day. A
-%small set of optimized, powerful servers (less than 5) could conceivably handle
-%this load. Unfortunately, the real world doesn't work this way:
-%
-%\begin{enumerate}
-%\item Traffic is bursty. Access requests aren't going to be spread out evenly
-%  over the course of the day and no small cluster of servers could serve requests
-%  for the entire internet all at the same time. Worse, extremely high load tends
-%  to trigger race latent conditions and deadlocks. Furthermore, load that
-%  exceeds capacity will cause a lot of request to be dropped and retried which
-%  will amplify congestion. Basically, we'd need more like 1000 powerful servers
-%  which becomes expensive.
-%\item Perfect uptime is nearly impossible; If DRACL ever goes down, all access control on the internet
-%  would abruptly stop working. Given that we can't get users to pay for this
-%  service and we can't sell their personal information (we care about privacy),
-%  achieving even close to perfect uptime is well beyond our reach.
-%\item Perfect security is (practically) impossible and if DRACL were ever
-%  completely compromised, all data protected by it would be compromised.\todo{Is
-%    this statement confusing?} Therefore, we can't afford to rely on a
-%  centralized fully-trusted entity.
-%\end{enumerate}
-%
-%Given that we can't charge but need money to run this system.
+% Additionally, we can't expect some third party to run a perfectly secure server
+% capable of handling access control checks in real-time with no downtime for
+% free. In a perfect world, it would be possible for such a server to exist; as a
+% matter of fact, a few such servers could probably service the entire internet.
+% As reasonable approximation, assume the same number of daily users as
+% Facebook\texttrademark{} (1.13B) use DRACL and that they make at most 100 access
+% control requests per day. This gives us an upper bound 1.3M requests per second
+% assuming these requests are evenly spread out over the course of the day. A
+% small set of optimized, powerful servers (less than 5) could conceivably handle
+% this load. Unfortunately, the real world doesn't work this way:
+% 
+% \begin{enumerate}
+% \item Traffic is bursty. Access requests aren't going to be spread out evenly
+%   over the course of the day and no small cluster of servers could serve requests
+%   for the entire internet all at the same time. Worse, extremely high load tends
+%   to trigger race latent conditions and deadlocks. Furthermore, load that
+%   exceeds capacity will cause a lot of request to be dropped and retried which
+%   will amplify congestion. Basically, we'd need more like 1000 powerful servers
+%   which becomes expensive.
+% \item Perfect uptime is nearly impossible; If DRACL ever goes down, all access control on the internet
+%   would abruptly stop working. Given that we can't get users to pay for this
+%   service and we can't sell their personal information (we care about privacy),
+%   achieving even close to perfect uptime is well beyond our reach.
+% \item Perfect security is (practically) impossible and if DRACL were ever
+%   completely compromised, all data protected by it would be compromised.\todo{Is
+%     this statement confusing?} Therefore, we can't afford to rely on a
+%   centralized fully-trusted entity.
+% \end{enumerate}
+% 
+% Given that we can't charge but need money to run this system.
 
-%%% END
+% %% END
 
 % The obvious solution is to define a system where 
 % control server and 
@@ -582,9 +604,9 @@ in the following sections, we explain in further detail. This chapter is
 intended to provide enough information to understand and evaluate DRACL but is
 not a full specification for the DRACL protocol.
 
-DRACL uses groups as the unit of access control. That is, publishers put
-their ``friends'' in groups and specify which groups should be able to access
-which resources.
+DRACL uses groups as the unit of access control. That is, publishers put their
+friends in groups and specify which groups should be able to access which
+resources.
 
 At any time, the publisher can create, delete, or modify (add/remove members
 to/from) their groups. After a user is removed from a group, they will loose
@@ -592,13 +614,14 @@ access to any existing content when their keys expire. Importantly, they will
 never be able to access any content made available to the group \emph{after}
 they are removed from it.
   
-Whenever the group assignments change, the publisher uploads a new private
-key for each of it's ``friends'' to its AP. However, it doesn't have to update
-the ACLs mentioning the modified group.
+Whenever the group assignments change, the publisher uploads a new private key
+for each of it's friends to its AP. However, it doesn't have to update the ACLs
+mentioning the modified group.
   
-When posting a resource on a content host, the publisher also uploads an
-opaque ACL. The ACL specifies which of the publisher's groups should be able
-to access the content, the identity of the publisher, and the publisher's AP. ACLs never expire.
+When posting a resource on a content host, the publisher also uploads an opaque
+ACL. The ACL specifies which of the publisher's groups should be able to access
+the content, the identity of the publisher, and the publisher's AP. ACLs never
+expire.
   
 When accessing a resource, the consumer first downloads their secret key from
 the publisher's AP if they haven't already and then proves that they are a
@@ -617,16 +640,16 @@ In DRACL, consumers use secret keys given to them by publishers when
 authenticating to content hosts. This means they need some way of getting these
 secret keys.
 
-After choosing what groups each consumer should be in, the publisher
-generates one secret key per consumer encoding the groups to which the consumer
-belongs therein. The publisher then encrypts the secret key with the consumers
-public key (signing it as well), then uploads it to the AP along with the
-consumers public key and the identity of their (the consumer's) AP.
+After choosing what groups each consumer should be in, the publisher generates
+one secret key per consumer encoding the groups to which the consumer belongs
+therein. The publisher then encrypts the secret key with the consumers public
+key (signing it as well), then uploads it to the AP along with the consumers
+public key and the identity of their (the consumer's) AP.
 
-To download the key, the consumer asks the publisher's AP for all secret
-keys belonging to them (the consumer). When making this request, the consumer
-proves that their key pair hasn't been revoked by presenting a valid,
-short-lived certificate signed by their (the consumer's) AP.
+To download the key, the consumer asks the publisher's AP for all secret keys
+belonging to them (the consumer). When making this request, the consumer proves
+that their key pair hasn't been revoked by presenting a valid, short-lived
+certificate signed by their (the consumer's) AP.
 
 \section{Authentication}
 \label{sub:authentication}
@@ -666,9 +689,10 @@ won't take effect till all outstanding keys have expired (on the order of
 hours).
 
 To prevent publishers with revoked keys from gaining or granting access to
-content they own, we include a short-lived certificate signed by the publisher's AP in the ``setup material'' of the authentication protocol. To lock
-down an account, the AP simply stops issuing this certificate. This will prevent
-anyone from authenticating against this user's ACLs.
+content they own, we include a short-lived certificate signed by the publisher's
+AP in the ``setup material'' of the authentication protocol. To lock down an
+account, the AP simply stops issuing this certificate. This will prevent anyone
+from authenticating against this user's ACLs.
 
 To prevent consumers with revoked keys from accessing content owned by other
 users, we use a two-key system when authenticating against ACLs. Basically,

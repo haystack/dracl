@@ -72,7 +72,7 @@ content hosted on services (content hosts) by providing these services with
 access control lists (ACLs) that opaquely specify which consumers and groups of
 consumers should be granted access. Unlike existing solutions, DRACL does not
 rely on a centralized authority (unlike Facebook Connect, Google), does not
-allow access control providers to masquerade as their users\note{Consumers and
+allow access control providers to masquerade as their users\todo{Consumers and
   producers. should I fix this use?} (unlike Mozilla
 Persona, OpenID), and allows publishers to share content with their friends on
 third party content hosts without revealing their social networks to these
@@ -96,7 +96,7 @@ For convenience, we define the following terms:
       are the unit of access control (i.e., publishers grant access to
       groups, not directly to individual consumers).
     \item[Access Control Provider (AP)] A helper service for facilitating
-      access control. Every DRACL user\note{again, that word} will have an AP (just like every email
+      access control. Every DRACL user\todo{again, that word} will have an AP (just like every email
       user has an email provider). Basically, the AP can perform limited actions on
       behalf of users while offline and can help ensure that a compromise of a user's
       account is recoverable.
@@ -108,7 +108,7 @@ For convenience, we define the following terms:
 
 \section{Requirements}
 
-\note{David: I can't discuss Facebook etc. without first specifying a criteria
+\todo[inline]{David: I can't discuss Facebook etc. without first specifying a criteria
 by which to judge them. However, I've expanded this section to discuss why we
 care about our requirements and changed it to avoid actually talking about
 DRACL.}
@@ -119,11 +119,14 @@ these requirements mean in the context of access control systems and why we care
 about them. Additionally, we make no assumptions about whether or not such a
 system already exists; we simply state what we want out of such a system.
 
-Two explicit non-goals are hiding the content from content hosts and hiding
-social networks from global adversaries. We want an access control system, not a
-full-fledged privacy preserving communication system.
-
-TODO: EXPLAIN! ^^
+Two explicit non-requirements are hiding the content from content hosts and
+hiding social networks from global adversaries. We want an access control
+system, not a full-fledged privacy preserving communication system primarily
+because it simply wouldn't fit with the web as it is today.\todo[inline]{How much do you
+  want me to explain this? My argument is basically: Not even TOR is secure against
+  global adversaries, hiding content from content hosts would require extensive
+  modification of the content hosts. I could just lump this with the
+  practicality goal.}
 
 % Finally, due to some privacy/efficiency/security trade-offs we've made, we
 % couldn't hide the identity of publishers (anonymous publishing) or hide
@@ -666,7 +669,7 @@ but is not a full specification for the DRACL protocol.
 \section{Lightspeed Overview}
 
 This section is a lightspeed overview. Think of it as SparkNotes\texttrademark{}
-for DRACL.\note{This is still somewhat detailed. However, I would like some
+for DRACL.\todo{This is still somewhat detailed. However, I would like some
   section somewhere to to contain all this information in one place.}
 
 DRACL uses groups as the unit of access control. That is, publishers put their

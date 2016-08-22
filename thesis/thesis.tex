@@ -1,7 +1,7 @@
 % {{{ Preamble
-\documentclass[pdftex,12pt,a4papaer]{report}
+\documentclass[pdftex,12pt,a4papaer,twoside,notitlepage]{report}
+\usepackage{geometry}
 \usepackage[pdftex]{graphicx}
-\usepackage{fancyhdr}
 \usepackage{parskip}
 \usepackage[numbers]{natbib}
 \usepackage{url}
@@ -17,28 +17,90 @@
 \usepackage{hyperref}
 \usepackage{todonotes}
 \usepackage{textcomp}
-% \usepackage{minted}
-\pagestyle{fancy}
+\usepackage{listings}
 % }}}
 \setlength{\marginparwidth}{3cm}
 
 \linespread{1.5}
 
-\title{DRACL 2.0 Proposal}
+\title{DRACL}
 \author{Steven Allen}
-\date{\today}
-
-% {{{ Header
-\rhead{\thedate}
-\chead{\thetitle}
-\lhead{\theauthor}
-% }}}
+\date{August 31, 2016}
 
 \newcommand{\note}[1]{\textit{\textbf{Note:} #1}}
 
+
+\definecolor{darkgreen}{rgb}{0,0.4,0}
+\lstset{
+  language=C,
+  basicstyle=\ttfamily,
+  breaklines=true,
+  upquote=true,
+  captionpos=b,
+  frame=single,	
+  commentstyle=\color{darkgreen},
+}
+
+
 \begin{document}
 
-\thispagestyle{plain}
+\newgeometry{left=1in,right=1in,top=1in,bottom=1in}
+
+\begin{titlingpage}
+{
+
+\setstretch{1.0}
+
+\setlength{\parskip}{1em}
+\begin{center}
+
+\textbf{DRACL (Decentralized Resource Access Control List)}
+
+by Steven D. Allen
+
+S.B, C.S. M.I.T. 2014
+
+\vspace{2em}
+
+Submitted to the
+
+Department of Electrical Engineering and Computer Science in
+Partial Fulfillment of the Requirements for the Degree of
+
+Master of Engineering in Electrical and Computer Science
+
+at the
+
+Massachusetts Institute of Technology
+
+August 2016
+
+\copyright~2016 Steven M. Allen. Some rights reserved.
+
+The author hereby grants to M.I.T. permission to reproduce and distribute
+publicly paper and electronic copies of this thesis document in whole and in
+part in any medium now known or hereafter created.
+
+\vspace{3em}
+\begin{tabular}{c l}
+  Author: & \hrulefill \\
+  & {\small Department of Electrical Engineering and Computer Science } \\
+  & {\small August 31, 2016 } \\
+  \\
+  Certified by: & \hrulefill \\
+  & {\small David Karger, Professor, Thesis Supervisor } \\
+  \\
+  Accepted By: & \hrulefill \\
+  & {\small Dennis M. Freeman, Chairman, Masters of Engineering Thesis Committee } \\
+\end{tabular}
+\end{center}
+}
+
+\end{titlingpage}
+
+\cleardoublepage
+
+\thispagestyle{empty}
 
 \begin{center}
     \vspace*{\fill}
@@ -47,7 +109,7 @@
         DRACL (Decentralized Resource Access Control List) \\
     }
 
-    \vspace{\fill}
+    \vspace*{\fill}
     {\large
     \begin{minipage}{0.9\textwidth}
         \emph{Author:} \theauthor{} \hfill \emph{Advisor:} David Karger
@@ -57,90 +119,199 @@
         \end{center}
     \end{minipage}
     }
+
     \vspace*{\fill}
+
+    \begin{minipage}{0.8\textwidth}
+      \small
+      \begin{center}
+        In Partial Fulfillment of the Requirements for the Degree of Master of
+        Engineering in Electrical Engineering and Computer Science.
+      \end{center}
+
+    \end{minipage}
+
+    \vspace*{\fill}
+
 \end{center}
+
+
+\begin{abstract}
+  DRACL is a practical, user friendly, secure, and \emph{privacy-preserving}
+  federated access control system. It allows producers to manage, through a
+  single authentication provider, which consumers can access what content across
+  all content hosts that support the DRACL protocol. It preserves user privacy
+  by not revealing the producers' social networks to content hosts and allowing
+  content consumers to access content anonymously. Unlike existing solutions,
+  DRACL is federated (cf. Facebook Connect, Google Accounts), does not have a
+  single point of failure (cf. Mozilla Persona, OpenID), and does not reveal its
+  producers' social networks to content hosts (cf. Facebook Connect's
+  \verb=user_friends= permission\cite{facebook-connect-user-friends}).
+\end{abstract}
+
+\restoregeometry
+
+\cleardoublepage
 
 \tableofcontents
 
-\newpage
+\cleardoublepage
 
 \chapter{Introduction} 
 
-DRACL is a federated, privacy-preserving access control system that allows
-content publishers (not necessarily the professional kind) to control access to
-content hosted on services (content hosts) by providing these services with
-access control lists (ACLs) that opaquely specify which consumers and groups of
-consumers should be granted access. Unlike existing solutions, DRACL does not
-rely on a centralized authority (unlike Facebook Connect, Google), does not
-allow access control providers to masquerade as their users\todo{Consumers and
-  producers. should I fix this use?} (unlike Mozilla
-Persona, OpenID), and allows publishers to share content with their friends on
-third party content hosts without revealing their social networks to these
-content hosts.
+The web should look like one big interconnected social network. People should be
+able to share with anyone on any host regardless of whether or not said person
+has an account with any specific host. Additionally, people should be able to
+access material shared with them without having to jump through hoops, sign up,
+or hand out personal information to the website hosting the content. It should
+be a web without walls.
 
-\section{Terms}
+It should be user friendly. People shouldn't have to manage multiple accounts or
+manually re-create their social network on every service they use.
 
-For convenience, we define the following terms:
+It should be free and fluid. People should be able to choose what services they
+use, where they host their content, and how they communicate. They should be
+able to move from service to service and even communicate across multiple
+services without fragmenting their social networks.
+
+It shouldn't require users to sacrifice their privacy in order to participate.
+People should be able to access content shared with them without being forced to
+give up personal information. People should be able to share content with their
+without revealing their social network to the party that happens to host the
+content.
+
+It should be secure and robust. A single service going down shouldn't shutdown
+social communication online. A compromise of a single service shouldn't lead to
+a cascading compromises of other services.
+
+The web does not look like one big interconnected social network. Instead, it's
+filled with walled off ``social networks'' that don't interoperate by design.
+
+It's not user friendly. Users must manage multiple accounts. Some smaller
+services give users the option to authenticate with a one of a few ``blessed''
+third-party accounts but these aren't standardized and doesn't give the user the
+freedom to choose who they trust (they have to choose from a small set).
+
+It's not free and fluid. Someone on Google+ can't share content with someone on
+Facebook. This fragments social networks and forces people to stick with
+services they may not like simply because that's where their friends are.
+
+It impossible to socialize with friends and family online without sacrificing
+privacy. For example, Facebook requires anyone wanting to simply access content
+to have an account and requires that all account holders sign up with their real
+name. On a web without walls, people should be able to access content shared
+with them on, e.g., Facebook without ever signing up or telling Facebook
+anything about themselves.
+
+It's not secure and robust. Shutting down Twitter and Facebook effectively shuts
+off most social interaction on the web. A compromise of Facebook would
+compromise most semi-private social interactions on the web and would compromise
+all websites that use Facebook's authentication service, Facebook Connect.
+
+\section{The Problem}
+
+We've identified three pieces needed to turn the web into a single social
+network: identity management, access control, and content syndication.\todo{Do
+  we include content hosting (e.g. solid)? I'm basically just taking it for
+  granted that the ``web'' already does hosting.}
+
+Identity management addresses the problem of naming someone on the internet.
+Identity management is a prerequisite for any social network that isn't entirely
+public (e.g. 4chan) because a producer needs to be able to name, or describe, a
+consumer to state whether or not that consumer should be able to access
+something. In our case, we need an identity management solution that allows
+naming people across services.
+
+Access control addresses the problem of limiting who --- identified by the
+identity system --- can access what. To make the web look like one big social
+network, we need an access control system that can limit access to content
+independent of where it is stored.
+
+Content syndication addresses the problem of advertising and finding content.
+That is, while an access control system can permit or deny a consumer from
+accessing content, it doesn't actually tell the consumer where to find content
+they can access. In Facebook terms, this is the \emph{feed}. To achieve our
+goal, we need a content syndication system that allows users to advertise
+discover content independent of where it is stored.
+
+Systems like Facebook, Keybase, NameCoin, and GnuPG (OpenPGP) try to solve the
+identity management problem. None of these are perfect: Facebook is completely
+centralized, Keybase is somewhat centralized, NameCoin is untested and
+complicated, GnuPG's user experience is needlessly complicated, and none of
+these system have wide adoption. However, this \emph{is} a well explored problem
+lacking only a simple, widely adopted solution.
+
+We're focusing on solving the access control problem. We would like a practical,
+secure, privacy preserving, and developer and user friendly access control
+system for the web that allows people to manage who can access what across all
+the content hosts they choose to use through a centralized system.
+
+We leave the content syndication problem for future work. The current most
+widely adopted solution is email. However, email is far from
+perfect.\todo{David, citations please. This is your area.}.
+
+We're still a long way off from a web without walls but we provide a large
+missing component.
+
+\section{Terminology}
+
+Before actually diving into the problem of access control and our solution, we
+need a consistent, well defined language for discussing it. Below, we define
+some critical terminology used in this document.
 
 \begin{compactdesc}
     \item[Identity] An assumed identity. That is, identities may not correspond
       one-to-one to real people. They may be pseudonymous, or may correspond to
-      a group of people.
-    \item[Publisher] A user that publishes content and wishes to control
+      groups of people.
+    \item[Producer] A user that publishes content and wishes to control
       access to said content.
-    \item[Consumer] A user that accesses content published by a publisher
-      with the publisher's permission.
+    \item[Consumer] A user that accesses content published by a producer
+      with the producer's permission.
     \item[Authorized Consumer] A consumer that is authorized to access a
       particular resource.
-    \item[Group] A group of users as defined a publisher. In DRACL, groups
-      are the unit of access control (i.e., publishers grant access to
-      groups, not directly to individual consumers).
-    \item[Access Control Provider (AP)] A helper service for facilitating
-      access control. Every DRACL user\todo{again, that word} will have an AP (just like every email
-      user has an email provider). Basically, the AP can perform limited actions on
-      behalf of users while offline and can help ensure that a compromise of a user's
-      account is recoverable.
+    \item[Group] A group of users as defined by a producer. In DRACL, groups
+      are the unit of access control (i.e., producers grant access to groups,
+      not directly to individual consumers).
+    \item[Authentication Provider (AP)] A helper service for facilitating access
+      control. Every DRACL producer will have an AP (just like every email user
+      has an email provider). Basically, the AP can perform limited actions on
+      behalf of producers while they're offline and can help ensure that a
+      compromise of a producer's account is recoverable. We assume that the AP
+      isn't actively malicious but can be compromised and may be nosy.
     \item[Content Host] A party using this system to authenticate content it
       hosts. For example, Flicker, Facebook, Imgur, etc.
     \item[Friend] Same as a Facebook friend. That is, the relationship may or
       may not be friendly.
+    \item[Honest But Curious Party] An honest but curious party follows
+      protocols as specified but attempts to learn information they shouldn't
+      know by looking at the protocol's trace. That is, they aren't actively
+      malicious, just nosy. This is the standard cryptographic definition of
+      honest but curious.
+    \item[Malicious Party] A malicious party, on the other hand, will deviate
+      from the protocol when convenient.
 \end{compactdesc}
 
 \section{Requirements}
 
-\todo[inline]{David: I can't discuss Facebook etc. without first specifying a criteria
-by which to judge them. However, I've expanded this section to discuss why we
-care about our requirements and changed it to avoid actually talking about
-DRACL.}
-
-We would like a practical, secure, privacy preserving, and developer and user
-friendly access control system for the web. In this section, we discuss what
+We would like a practical, developer and user friendly, secure, and privacy
+preserving access control system for the web. In this section, we discuss what
 these requirements mean in the context of access control systems and why we care
-about them. Additionally, we make no assumptions about whether or not such a
-system already exists; we simply state what we want out of such a system.
+about them. We make no assumptions about whether or not such a system already
+exists; we simply state what we want out of such a system.
 
 Two explicit non-requirements are hiding the content from content hosts and
-hiding social networks from global adversaries. We want an access control
-system, not a full-fledged privacy preserving communication system primarily
-because it simply wouldn't fit with the web as it is today.\todo[inline]{How much do you
-  want me to explain this? My argument is basically: Not even TOR is secure against
-  global adversaries, hiding content from content hosts would require extensive
-  modification of the content hosts. I could just lump this with the
-  practicality goal.}
-
-% Finally, due to some privacy/efficiency/security trade-offs we've made, we
-% couldn't hide the identity of publishers (anonymous publishing) or hide
-% publishers' social networks from their access control providers.
+hiding social networks from global adversaries. These are simply out of scope of
+an access control system and can be provided by a dedicated anonymization system.
 
 \subsection{Practical}
 
 By practical, we mean a good access control system should be designed to work in
 the world as it is, not as we wish it were.
 
-For example, it shouldn't assume that publishers will run their own servers or
-pay for anything for that matter. The amount of invasive advertising, poor
-software, and privacy violations people tend to put up with on the internet for
-``free'' services is a testament to how far people will go to avoid paying.
+For example, it shouldn't assume that producers will run their own servers or
+pay for anything. The amount of invasive advertising, poor software, and privacy
+violations people tend to put up with on the internet for ``free'' services is a
+testament to how far people will go to avoid paying.
 
 Additionally, it can't assume that anyone can build a perfect implementation. No
 practical, complex system can hope to achieve perfect security and perfect
@@ -152,80 +323,46 @@ minimum. This is a direct result of users not being willing to pay for anything:
 nobody can't afford to run overly expensive computations on behalf of users for
 free.
 
-\subsection{Secure}
+\subsection{User Friendly}
+\label{sub:goal-user}
 
-By secure, we mean that publishers should be able to efficiently/reliably revoke
-access from consumers, compromises should be recoverable, and only authorized
-consumers should be able to access content.
+By user friendly, we mean that sharing and accessing content across content
+hosts should be as easy as sharing content on a centralized social network like
+Facebook. Users shouldn't have to manage multiple sets of credentials or
+manually recreate their social network on every content host they use.
 
-First, for efficient and reliable revocation, a publisher should not have to
-contact every content host in order to revoke access to some piece of content.
-First, this would trigger a lot of up-front network traffic, even for old
-content that may never be accessed again. Second, it would violate the fail-safe
-principle of systems design: if a publisher were unable to contact some of their
-content hosts for some reason, there would be no way to revoke access.
+Currently, content hosts (usually) force their users to manage one set of
+credentials per service. In addition to being beyond annoying, this practice
+encourages users to choose simple passwords or reuse them. A good global access
+control system can eliminate this problem by allowing users to manage a single
+access control account and re-use the same account from service to service.
 
-Second, no compromise of any single party should be unrecoverable and no
-compromise of any single party should bring down the entire system. Websites are
-hacked all the time and user account compromise is common so any system that
-can't recover from compromise is dead in the water.
+Additionally, it's prohibitively difficult to move between content hosts because
+because social networks are usually tied to a single content host. A global
+access control system can alleviate this problem by allowing producers to
+grant access to their friends on any content host regardless of what content
+hosts their friends use.
 
-Finally, only authorized consumers should be able to access content, no trusted
-third parties. Currently, if someone were to hack Gmail, they'd be able to
-access pretty much everything on the public internet (through, e.g., password
-reset emails). This was a mistake. From a security perspective, it's terrifying;
-from a business perspective, it's a unacceptable liability. No sane,
-well-intentioned party wants that much power; this is why Facebook, Google, etc.
-are pushing for end-to-end encryption. Therefore, a good access control system
-should avoid this problem by design.
+A consequence of making it easier to move between content hosts is more
+practical competition. Competition is not only good for users, it's absolutely
+necessary to keep companies from screwing their users over in pursuit of more
+money. See AT\&T\texttrademark{}\cite{att} policy and
+Comcast's\texttrademark{}\cite{comcast} recent attempt to charge an additional
+fee for not snooping on their customers browser history.
 
-\subsection{Privacy Preserving}
+Finally, a user friendly access control system needs to support groups. Groups
+allow producers to manage access to content at a level more coarse grained than
+individual consumers but finer grained than ``all friends''. Without support for
+groups, producers wishing to share with more than a few consumers are likely to
+just share the content with all of their friends because manually selecting more
+than a few users is extremely tedious.
 
-By privacy preserving we mean that a good access control system should avoid
-revealing metadata. That is, it should reveal neither the identities of
-consumers nor the composition of its publishers' social networks when possible.
-
-First, such a system should not reveal the identities of consumers to content
-hosts because people should not be excluded from social interactions for valuing
-their privacy. In the web as it exists today, it's impossible to participate in
-social networks without handing out personal information to third parties. This
-forces people to either hand out this information or isolate themselves
-completely. While, to prevent abuse, social networks often need
-publishers/publishers to identify themselves, we believe that consumers should
-be able to access content without identifying themselves. This would allow
-people to anonymously access content on any content host while only publishing
-content on content hosts they trust.
-
-Second, such a system should not reveal the identities of consumers to content
-hosts because people should be free to associate without being judged by
-association. That is, it's a violation of Alice's privacy for Betty to publicly
-declare an association with Alice (implicitly or explicitly) without her
-consent. For example, if Betty, Carol, Dora, and Ester are all known members of
-a local pregnancy group, them all claiming an association with Alice is a good
-indication that she is also pregnant. This isn't just an abstract issue;
-information like this is very valuable to advertisers. There have been
-documented incidents~\cite{target} of advertisers accidentally outing pregnant
-teens to their parents by sending them advertisements targeted at pregnant
-women.
-
-Third, such a system should not reveal the structure of a publisher's social
-network, \emph{especially} to members of their social network, because
-encourages publishers to share more openly than they might feel comfortable
-doing\todo{not the best way of putting this}. People should feel free to exclude
-others from their social network; the ability to communicate privately (exclude
-unwanted parties) is necessary to prevent self-censorship. For example, a good
-access control system should not reveal that two consumers are members of some
-shared group while a third consumer is not. This could pressure the publisher to
-include all three in the same group to avoid offending the third would, in turn,
-cause the publisher to either share content more widely than they might
-otherwise want or refrain from sharing at all (a chilling effect).
-
-% Unfortunately, this goal isn't entirely achievable in a practical system due to
-% security and efficiency trade-offs but DRACL gets pretty close. See section
-% the discussion section on privacy (section \ref{sec:privacy}) for details on what we
-% actually achieved.
-
-% TODO: Uncomment?/move How do I deal with comments like this?
+Group support goes deeper than the UI. Adding/removing a consumer to/from a
+group should retroactively grant/revoke that consumer's access to the group's
+content. Otherwise, producers would have to manually grant/revoke access on a
+content-by-content basis which would be extremely tedious. Worse, it's error
+prone so a producer might forget to revoke a malicious consumer's access to some
+piece of content.
 
 \subsection{Developer Friendly}
 \label{sub:goal-developer}
@@ -233,7 +370,7 @@ otherwise want or refrain from sharing at all (a chilling effect).
 By developer friendly, we mean that a good access control system should be at
 least as easy to deploy as a custom password-based identity scheme (the current
 de facto standard), it shouldn't require significant infrastructure changes, and
-it should make it easier to bootstrap new content host.
+it should make it easier to bootstrap a new content host.
 
 We believe that a lack of developer friendliness contributed significantly to
 the failure of systems like OpenID\cite{openid}. More concretely, we know that
@@ -248,66 +385,93 @@ host. A good global access control system should help alleviate this problem by
 allowing users to access content on any content host without having to even so
 much as login.
 
-\subsection{User Friendly}
-\label{sub:goal-user}
 
-By user friendly, we mean that a good access control system should make the
-internet look like one interconnected social network. Users shouldn't have to
-manage multiple sets of credentials or manually recreate their social network on
-every content host they use.
+\subsection{Secure}
 
-Currently, content hosts (usually) force their users to manage one set of
-credentials per service. In addition to being beyond annoying, this practice
-encourages users to choose simple passwords or reuse them. A good global access
-control system can eliminate this problem by allowing users to manage a single
-access control account and re-use the same account from service to service.
+By secure, we mean that only authorized consumers should be able to access
+content, producers should be able to efficiently/reliably revoke access from
+consumers, and compromises should be recoverable.
 
-Additionally, it's prohibitively difficult to move between content hosts because
-because social networks are usually tied to a single content host. A global
-access control system can alleviate this problem by allowing publishers to
-grant access to their friends on any content host regardless of what content
-hosts their friends use.
+First, only authorized consumers, the content's producer, and the content host
+should be able to access content, no ``trusted'' third parties. Currently, if someone were
+to hack Gmail, they'd be able to access pretty much everything on the public
+internet (through, e.g., password reset emails). This was a mistake. Therefore,
+a good access control system should avoid this problem by design.
 
-Finally, a consequence of making it easier to move between content hosts is
-more practical competition. Competition is not only good for users, it's
-absolutely necessary to keep companies from screwing their users over in pursuit
-of more money. See AT\&T\texttrademark{}\cite{att} policy and
-Comcast's\texttrademark{}\cite{comcast} recent attempt to charge an additional
-fee for not snooping on their customers browser history.
+Second, for efficient and reliable revocation, a producer should not have to
+contact every content host in order to remove a consumer from a group. First,
+this would trigger a lot of up-front network traffic, even for old content that
+may never be accessed again. Second, it would violate the fail-safe principle of
+systems design: if a producer were unable to contact some of their content hosts
+for some reason, there would be no way to revoke access.
+
+Finally, no compromise of any single party should be unrecoverable and no
+compromise of any single party should bring down the entire system. Websites are
+hacked all the time and user account compromise is common so any system that
+can't recover from compromise is dead in the water.
+
+\subsection{Privacy Preserving}
+
+By privacy preserving we mean that a good access control system should avoid
+revealing metadata. That is, it should reveal neither the identities or actions
+of consumers nor the composition of its producers' social networks to any party
+when possible.
+
+First, such a system should not reveal the identities of consumers to content
+hosts because people should not be excluded from social interactions for valuing
+their privacy. In the web as it exists today, it's impossible to participate in
+social networks without handing out personal information to third parties. This
+forces people to either hand out this information or isolate themselves
+completely. While, to prevent abuse, social networks often need
+producers/producers to identify themselves, we believe that consumers should
+be able to access content without identifying themselves. This would allow
+people to anonymously access content on any content host while only publishing
+content on content hosts they trust.
+
+Second, such a system should not reveal the consumer activity to anyone,
+especially producers. If a consumer views a piece of content, the content's
+producer should not be notified in any way without the consumers explicit
+consent. Otherwise, the consumer loses the freedom to choose to either defer or
+avoid participation in a social interaction.
+
+Third, such a system should not reveal the identities of consumers to content
+hosts because it would discourage the sharing and consuming of content due to
+fear of judgment by association. Producers may choose not to share a piece of
+content with a consumer because they don't want to be associated with the
+consumer. Consumers may choose not to access a piece of content because they
+don't wish to be associated with the producer. In general, a good access
+control system should not influence what people share.
+
+Finally, such a system should not reveal the structure of a producer's social
+network, \emph{especially} to members of their social network, because would
+again influence if and to whom a producer chooses to share content. People
+should feel free to exclude others from their social network; the ability to
+communicate privately (exclude unwanted parties) is necessary to prevent
+self-censorship. For example, if an access control system revealed that two
+consumers are members of some shared group while a third consumer is not, a
+producer might feel pressured include all three in the same group to avoid
+offending the third. This would, in turn, cause the producer to either share
+content more widely than they might otherwise choose or refrain from sharing at
+all (a chilling effect).
+
+% Unfortunately, this goal isn't entirely achievable in a practical system due to
+% security and efficiency trade-offs but DRACL gets pretty close. See section
+% the discussion section on privacy (section \ref{sec:privacy}) for details on what we
+% actually achieved.
+
+% TODO: Uncomment?/move How do I deal with comments like this?
 
 \section{Existing Systems} 
 
 Given the goals stated in the previous section, this section explores existing
 systems and motivates the need for a new one.
 
-\subsection{Bearer Credentials}
-
-Before going into real access control systems, we need to mention an obvious
-solution: bearer credentials. You've almost definitely run across them, usually
-in the form of ``secret'' links. That is, if you know the link, you can access
-the resource.
-
-One could conceivably build an entire access control system out of bearer
-credentials. Unfortunately, most bearer credentials provide no simple way of
-revoking access; you can't just take back a link. They also tend to be easy to
-lose or accidentally give away (i.e., make public).
-
-Some systems like Google's Macaroons~\cite{macaroon} fix these problems by
-issuing short-lived bearer credentials that can optionally require the bearer to
-prove knowledge of some additional key. Macaroons even support delegation.
-However, being short lived, we'd still need to design a system for issuing and
-managing Macaroons.
-
-In short, bearer credentials are a useful component of access control systems
-but don't really solve the problem.
-
 \subsection{Identity Systems}
 
-The most common access control scheme is to assign one or more unique identities
-to all users and then have all content hosts record which identities have access
-to what. We call these identity systems because, while access control systems
-can be built on top of them, they don't inherently provide access control as a
-feature.
+The most common access control scheme is to assign one or more identities to all
+users and then have individual content hosts implement custom access control
+systems on top of the identity system. In other words, there \emph{is} no global
+access control system.
 
 This type of system is inherently bad for privacy because content hosts learn
 the identities of who has access to what and, by extension, who knows who. While
@@ -317,22 +481,25 @@ learn from their shortcomings (in addition to the privacy problem).
 
 \subsubsection{Site Specific Identity}
 
-The vast majority of content hosts today force users to create site-specific
+The vast majority of content hosts today require users to create site-specific
 accounts. This is a poor solution to the access control problem for both users
 and content hosts because it introduces security hazards and has poor developer
 and user usability. The only goal this system meets is that no unauthorized
-third party can access a publishers content. It's also arguable that it
-meets the goal of not revealing the publishers social network to consumers
-but there's no guarantee about this and content hosts don't always get this
-right (e.g., the Google Buzz~\cite{google-buzz} fiasco).
+third party can access a producer's content. It's also arguable that it meets
+the goal of not revealing the producers social network to consumers but this
+isn't guaranteed and content hosts don't always get this right. For example, in
+2010, Google launched a social network called Google Buzz and automatically
+created accounts for its current Gmail users. Unfortunately, they decided to
+list every user's most frequent contacts on their \emph{public} profile
+page~\cite{google-buzz}.
 
-From a user usability standpoint, site-specific accounts force users to create new
-accounts and replicate their social networks on every content host they use. As
-discussed in the goals section on user friendliness (section \ref{sub:goal-user}), this is
-bad for usability.
+From a user usability standpoint, site-specific accounts force users to create
+new accounts and replicate their social networks on every content host they use.
+As discussed in the goals section on user friendliness (section
+\ref{sub:goal-user}), this is bad for usability.
 
 % DRACL avoids the first problem by allowing users to create a single account with
-% a single Access Control Provider for use on multiple content hosts. It avoids
+% a single Authentication Provider for use on multiple content hosts. It avoids
 % the second problem by handling access control on behalf of the content host.
 
 From a developer usability standpoint, site-specific accounts force content
@@ -364,32 +531,40 @@ site specific password section as users only have one set of credentials managed
 by a single, hopefully competent, entity. They also solve the associated
 usability problem of users having to remember multiple passwords.
 
-While centralized identity systems sometimes increase usability by allowing
-users to carry their social networks with them to content hosts (e.g. Facebook),
-they can't provide a way to do so while maintaining privacy. That is, for one
-user to allow another user to access a resource on a content host, the first
-user must identify the second user to the content host. This is a fundamental
-problem with identity systems because they operate on the level of identity.
+Some centralized identity systems increase usability by allowing users to carry
+their social networks with them to content hosts. For example, Facebook Connect
+allows content hosts to access to users' friends lists by requesting the
+\verb=user_friends= permission\cite{facebook-connect-user-friends}.
 
-Again, because these systems operate on identities, they force content hosts to
-implement their own access control systems which, again, violates our stated
-goals. Content hosts shouldn't have to reinvent the wheel.
+Unfortunately, centralized identity systems can't provide a way to do so while
+hiding the producer's social network from content hosts by definition. That is,
+for one user to allow another user to access a resource on a content host, the
+first user must identify the second user to the content host. This is a
+fundamental problem with identity systems because they operate on the level of
+identity and don't provide an access control system.
 
-Finally, because these systems are centralized, users are forced to choose
-between a few ``accepted'' providers and can't run their their own and content
-hosts are forced to support whatever identity systems happen to be in vogue at
-the time.\todo{This should probably also be mentioned in the goals. Does it go
-under privacy or user friendly?}
+Again, because these systems operate on the level of identity, they force
+content hosts to implement their own access control systems which, again,
+violates our stated goals. Content hosts shouldn't have to reinvent the wheel.
+
+Additionally, because these systems are centralized, users are forced to choose
+between a few ``accepted'' providers and can't run their their own. This is a
+problem because it doesn't allow free competition between identity providers.
+
+Finally, content hosts are forced to support whatever identity systems happen to
+be in vogue at the time. Even though many centralized identity systems use
+standards like OAuth $1.0$~\cite{oauth} to make integration with content hosts
+easier, they must still be blessed on a one-by-one basis.
 
 \subsubsection{Decentralized Identity}
 
-Decentralized identity systems such as OpenID~\cite{openid},
+Decentralized identity protocols such as OpenID~\cite{openid},
 Persona~\cite{persona}, and WebID~\cite{webid} allow users to identify to
 multiple services using the same credentials but, unlike centralized identity
-systems, decentralized identity systems do not force users to choose between a
+systems, decentralized identity protocols do not force users to choose between a
 few ``accepted'' providers. Additionally, in theory, content hosts should be
-able to support exactly one decentralized identity system --- assuming they
-eventually converge. While decentralized identity systems address the user
+able to support exactly one decentralized identity protocol --- assuming they
+eventually converge. While decentralized identity protocols address the user
 choice concern, they still don't address our privacy concerns because they still
 operate on the level of identity.
 
@@ -397,32 +572,43 @@ operate on the level of identity.
 
 Unlike identity systems, access control systems directly dictate what operations
 a system should and should not permit. Where an identity system answers the
-question ``Does <PROOF> imply that <CLIENT> is <IDENTITY>?'', access control systems
-answer the question ``Does <PROOF> imply that <CLIENT> has <PERMISSION>?''. In our
-case, ``<PERMISSION>'' is usually ``can access <CONTENT>''. This categorically
+question ``Does PROOF imply that CLIENT is IDENTITY?'', access control systems
+answer the question ``Does PROOF imply that CLIENT has PERMISSION?''. In our
+case, ``PERMISSION'' is usually ``can access CONTENT''. This categorically
 addresses our usability concerns with identity systems because the entire social
 network is now defined in by a unified system. Unfortunately, there aren't any
-existing access control systems that address our privacy and security concerns.
+existing access control systems that meet our privacy and security requirements.
 
 \subsubsection{Centralized Access Control}
 
 Centralized access control systems such as Kerberos~\cite{kerberos} and
 LDAP~\cite{ldap} allow services to offload user/group management to third
-parties (the access control provider). While, as noted above, this solves the
+parties (the authentication provider). While, as noted above, this solves the
 usability problems in centralized identity systems, it makes the centralization
 problem much worse. While content hosts can allow different users to
 authenticate with different centralized authentication services, they cannot
-allow users to choose their own centralized access control service without
-partitioning the social network because, by definition, centralized access
-control services don't interoperate.
+allow users to choose their own (fully) centralized access control service
+without partitioning the social network because, by definition, centralized
+access control services don't interoperate. Note: if a set of semi-centralized
+access control systems were built on top of some decentralized identity system,
+they could interoperate to an extent but (1) no such system exists and (2) this
+system would still be limited to blessed parties.\todo[inline]{David, I added
+  this last part in response to your comment but I really don't think this needs
+  to be said. No service large enough to become a ``blessed'' access control
+  service would want to interoperate with other services at any level as it
+  would make it easier for users to jump ship.}
 
-\subsubsection{Decentralised Access Control}
+\subsubsection{Decentralized Access Control}
 
 Decentralized (federated, really) access control systems offer the same benefits
 as centralized access control systems but without the drawbacks of being a
 centralized system. That is, users can freely choose between providers or run
 their own. Thus, decentralized access control systems categorically meet our
-user friendliness goals.
+user friendliness goals.\todo[inline]{
+  Re: 
+  ``require identity standard?''
+  Well, most decentralized access control systems double as decentralized
+  identity systems...}
 
 There are existing decentralized access control systems such as \cite{attrib}
 \cite{privattrib} \cite{drbac} \cite{socnet} and the Kerberos Consortium's User
@@ -432,7 +618,7 @@ decentralized access control, neither attempt to design an implementable system.
 UMA\cite{uma} \cite{drbac} and \cite{socnet} provide a more thorough system
 designs (UMA even provides a system specification) but they (1) fail to even
 address the question of user privacy and (2) completely trust a third party
-access control provider (e.g., UMA).
+authentication provider (e.g., UMA).
 
 Now we're in uncharted territory. So far, we've decided that we need an access
 control system, not an identity system, and would like it to be decentralized.
@@ -448,53 +634,76 @@ DRACL. If you just want to know how DRACL works but not why or how we got there,
 proceed to the Design Overview (chapter \ref{chap:design-overview}) for a
 top-down view of the DRACL protocol.
 
+\note{The straw men presented here are not complete solutions. We highlight the
+  problems we feel are important enough to motivate moving to a new solution but
+  gloss over many \textbf{dangerous} security flaws. Please \textbf{do not}
+  attempt to implement any of the straw men presented in this section without
+  serious analysis, even if you don't care about our stated reasons for not using
+  them.}
+
 \subsection{Zeroth Attempt}
 
-The brain-dead solution is to have content hosts ask publishers directly if
+The brain-dead solution is to have content hosts ask producers directly if
 consumer should be able to access some content. This obviously won't work
-because we can't expect the publisher's computer to be online all the time. As a
-matter of fact, for all we know, the publisher may never come back online ---
+because we can't expect the producer's computer to be online all the time. As a
+matter of fact, for all we know, the producer may never come back online ---
 they could be dead.
+
+Additionally, this solution has a serious privacy problem: the producer learns
+that the consumer has tried to access the content (refer to our privacy
+requirements for an explanation on why this is bad). We'd like to stick some
+service between the producer and the consumer to make this harder. At the end of
+the day, the producer could simply run this service themself but we feel that
+it's reasonable to assume that most producers won't have the resources to do
+this.
 
 \subsection{First Attempt}
 
-The first reasonable design would be to have every publisher pick an access
-control provider (AP) and have their AP act their behalf to handle all access
-control decisions in real-time. Basically, when publishing content, publishers
-would also assign a content ID (CID) to the content in question and tell the
-content host: when a consumer tries to access the content identified by CID, ask
-AP if they should be granted access. The user would then tell their which
-consumers and/or groups of consumers should be granted access to the content
-identified by CID.
+The first reasonable design would be to have every producer pick an
+authentication provider (AP) and have their AP act their behalf to handle all
+access control decisions in real-time. Basically, when publishing content,
+producers would also assign a content ID (CID) to the content in question and
+tell the content host: when a consumer tries to access the content identified by
+CID, ask AP if they should be granted access. The user would then tell their AP
+which consumers and/or groups of consumers should be granted access to the
+content identified by CID.
 
 On the plus side, this is an extremely simple system and meets many of our
 goals. From a privacy standpoint, neither consumers nor content hosts learn
-anything about publishers' social networks. From a security standpoint access
-can be revoked without contacting individual content hosts and compromise 
+anything about producers' social networks. Additionally, consumer activity is
+revealed only to the producer's AP, not the producer. From a security standpoint
+access can be revoked without contacting individual content hosts and compromise
 is all recoverable as nobody stores any security-sensitive state. From a
 developer friendliness standpoint, this system is great because it's simple.
 Unfortunately, this has has a some major drawbacks.
 
 \subsection{Don't Be A Weapon}
 
-For one, content hosts have to make network requests on behalf of clients to
-servers specified by clients. From a security standpoint, this very bad as it
-opens up the content host to resource exhaustion attacks and makes it possible
-to use the content host in DDoS attacks. For the resource exhaustion attack, an
-attacker could repeatedly cause a content host to attempt to contact
-non-responsive AP servers causing the content host to quickly run out of kernel
-resources resources. For DDoS attacks, an attacker could use a large number
-content hosts to saturate a single AP server's resources. From the access
-control server's standpoint, this traffic would be indistinguishable from
-legitimate traffic so it couldn't protect itself.
+For one, content hosts have to make network requests on behalf of clients
+(consumers) to servers (APs) specified by clients (producers). From a security
+standpoint, this very bad as it opens up the content host to resource exhaustion
+attacks and makes it possible to use the content host in DDoS attacks. For the
+resource exhaustion attack, an attacker could repeatedly cause a content host to
+attempt to contact intentionally-slow AP servers causing the content host to
+quickly empty its connection pool. This is a variant of the Slowloris DDoS
+attack\cite{slowloris}. Unfortunately, the standard mitigation techniques don't
+work here\todo{Explain? Would require a few paragraphs and isn't really in
+  scope.}. For DDoS attacks, an attacker could use a large number content hosts
+to saturate a single AP server's resources. From the access control server's
+standpoint, this traffic would be indistinguishable from legitimate traffic so
+it couldn't protect itself without blocking (potentially legitimate) the content
+hosts.
 
 There's a simple solution: have the consumer contact the AP on behalf of the
 content host. That is, the content host asks the consumer's browser to present a
 certificate from the AP certifying that the user should be able to access the
-content identified by the CID. The consumers browser then authenticates to the
-AP, gets the certificate, and returns it to the content host. As a matter of
-fact, most access control services, including the Kerberos Consortium's User
-Managed Access (UMA)~\cite{uma}, operate this way.
+content identified by the CID. The consumer's browser then authenticates to the
+AP, gets the certificate, and returns it to the content host. Offloading this
+work to the consumer has the additional benefit of reducing the load on the
+content host under normal conditions. As a matter of fact, most access control
+systems, including the Kerberos Consortium's User Managed Access
+(UMA)~\cite{uma}, operate this way.
+
 
 %Unfortunately, by introducing crypto into the protocol, we've made it
 %significantly harder to recover from system compromise violating our no
@@ -504,6 +713,36 @@ Managed Access (UMA)~\cite{uma}, operate this way.
 %secrets are leaked, we'll need a way to invalidate them. We'll fix this later
 %but you should keep it in mind.
 
+
+\subsection{Bearer Credentials}
+
+TODO: This needs to go somewhere
+
+%Before going into real access control systems, we want to quickly bring up
+%bearer credentials. You've almost definitely run across them, usually in the
+%form of ``secret'' links. That is, if you know (are a bearer of) the link, you
+%can access the resource hence the.
+%
+%One could just use bearer credentials. Unfortunately, most bearer credentials
+%provide no simple way to revoke access en mass. That is, you can manually revoke
+%individual bearer credentials
+%e.g., Google Docs does allow revoking access to a bearer of a ``share'' link but
+%that's special case.
+%
+%They also tend to be easy to
+%lose or accidentally give away (i.e., make public). 
+%
+%Some systems like Google's Macaroons~\cite{macaroon} fix these problems by
+%issuing short-lived bearer credentials that can optionally require the bearer to
+%prove knowledge of some additional key. Macaroons even support delegation.
+%However, being short lived, we'd still need to design a system for issuing and
+%managing Macaroons.
+%
+%In short, bearer credentials are a useful component of access control systems
+%but don't really solve the problem.
+%
+
+
 \subsection{Distribute The Storage}
 
 Unfortunately, there's another problem with this system as described: the access
@@ -511,40 +750,58 @@ control server needs to keep track of every piece of content ever published.
 This means that the AP's state will grow linearly with the amount of content
 published.
 
-Our solution to this was to replace the CIDs with access control lists (ACLs)
-encrypted with a key known to the AP. Now, instead of asking the AP if a user
-should be granted access to a piece of content, the content host asks the AP if
-a user is a listed in an ACL (or is a member of a group listed in the ACL).
-Basically, we're just distributing the load by storing the ACL on the content
-hosts instead of AP and using cryptography to make sure no party learns anything
-they shouldn't.
+Our solution was to replace the CIDs with access control lists (ACLs) stored on
+the content hosts encrypted with a key known to the AP. Now, instead of asking
+the AP if a user should be granted access to a piece of content, the content
+host asks the AP if a user is a listed in an ACL (or is a member of a group
+listed in the ACL). Basically, we're just distributing the load by storing the
+ACL on the content hosts instead of AP and using cryptography to make sure no
+party learns anything they shouldn't. The AP still needs to store the producer's
+social network (their friends list and group definitions) but this is likely
+going to be much smaller than the entire list of content they've ever published.
 
 \subsection{Don't Trust Third Parties}
 
 At this point, our system is looking pretty good but we still haven't addressed
 a key goal: no third parties with perfect security or uptime requirements. In
-the system as described so far, we fully trust that APs cannot be compromised;
-compromising the AP compromises the entire system (well, all users of that AP at
-least). Ideally, we want some sort of black-box that only hands out
-authorizations to the correct consumers but having every publisher ship a
+the system as described so far, a compromise of an AP compromises the entire
+system (well, all users of that AP) because the AP makes all the authorization
+decisions. Ideally, we want some sort of black-box that only hands out
+authorizations to the correct consumers but having every producer ship a
 literal black-box to their APs is obviously impractical. However, there's a
-better way: cryptography, specifically functional encryption.
+better way: cryptography.
 
-Using some fancy crypto, publishers can give their APs virtual black boxes that,
-given user ID and a specially constructed ACL, can construct a certificate
-usable only by the given consumer --- using some consumer-specific secret ---
-if, and only if, they a member of the ACL. Unfortunately, this isn't without
-drawbacks: this crypto is \emph{very} computationally expensive --- on the order
-of a second of CPU time. We've exchanged ``no expensive computation by third
-parties'' for ``no third parties with perfect security requirements''.
+The standard way to do this with cryptography would be to use certificates and
+public key cryptography. That is, every consumer has an public key and the
+producer signs this public key with a (time limited) statement that somehow
+describes what the consumer can access. Unfortunately, by nature of public key
+cryptography, the using the public key and certificate would uniquely identify
+the consumer to the content host violating our goal of anonymous consumers. So,
+we can't just do this with certificates.
+
+A alternative solution using symmetric cryptography would be to give every
+consumer some set of secret keys based on what content they should be able to
+access. Unfortunately, there's no way to expire a symmetric key. The only way to
+revoke a consumer's access to content would be to update the ACL. This violates
+our goal of being able to efficiently revoke access without updating every
+single ACL.
+
+As traditional cryptography doesn't appear to be enough, we turn to functional
+cryptography. Using functional cryptography, producers can give their APs
+virtual black boxes that, given user ID and a specially constructed ACL, can
+construct a certificate usable only by the given consumer --- using some
+consumer-specific secret --- if, and only if, they a member of the ACL.
+Unfortunately, this isn't without drawbacks: this crypto is \emph{very}
+computationally expensive --- on the order of a second of CPU time. This
+violates our requirement of not not performing expensive computation on third
+party servers.
 
 \subsection{Distribute The Load}
 
-However, we can now kill two birds with one stone by giving these black boxes to
-consumers, instead of APs, cutting the APs out of the picture entirely. By doing
-this, we've moved the heavy crypto from the access control provider to the
-consumer and made it possible for the consumer to authenticate against multiple
-ACLs without having to contact the AP each time.
+A simple way to fix this is to give the black boxes directly to consumers
+instead of some AP. This actually takes the AP out of the picture entirely so
+we're no longer relying on the AP to have perfect uptime (no AP) and it isn't
+running any expensive computations (doesn't even exist).
 
 However, now we can't remove users from groups. Basically, if one of these black
 boxes thinks a user is in a group, it will give this user certificates granting
@@ -553,20 +810,20 @@ black box to a consumer, we can't reach into the consumer machine and remove the
 black box.
 
 This time, we can solve this by making the black boxes expire after a period of
-time. That way, while publishers can't take black boxes back, they will simply
+time. That way, while producers can't take black boxes back, they will simply
 stop working after some timeout after which the consumer will have to ask the
-publisher for a new one.
+producer for a new one.
 
 But now we've just re-introduced the problem from the zeroth attempt: we can't
-expect the publisher to ever be online. What happens when the publisher goes
+expect the producer to ever be online. What happens when the producer goes
 offline permanently (e.g, dies) and one of the consumer's black boxes expires?
-In the system so far, that consumer permanently loses access to the publisher's
+In the system so far, that consumer permanently loses access to the producer's
 content.
 
 The solution this time is to bring the AP back in a limited form. Now, instead
 of giving the AP the certificate producing black box, we give the AP a black box
 factory that can make the black-boxes for consumers. This way, even if the
-publisher dies, the AP can continue producing these black boxes. Fortunately,
+producer dies, the AP can continue producing these black boxes. Fortunately,
 making black boxes is significantly less computationally expensive than using
 black boxes to make certificates. Unfortunately, the black boxes produced by
 this black box factory are 2x slower.
@@ -579,10 +836,13 @@ situation slightly but you can read about that in chapter
 
 \subsection{No Unrecoverable Compromises Of Any Single Party}
 
-An astute reader may have noticed that we haven't covered this goal in the
-design so far. We \emph{have} achieved this goal but it's a bit complicated and
-didn't play much of a role in motivating DRACL's design. If you want to know
-more, checkout the chapter \ref{chap:design-overview}.
+An astute reader may have noticed that we haven't covered the requirement of no
+unrecoverable compromises of any single party in the design so far. As described
+so far, a compromise of the producer, for example, is completely unrecoverable
+because the producer knows how to make all the keys. We assure you that DRACL
+meets this requirement but it's a bit complicated and didn't play much of a role
+in motivating DRACL's design. If you want to know more, checkout the design
+overview (chapter \ref{chap:design-overview}).
 
 % \subsection{Checks And Balances}
 % 
@@ -591,15 +851,15 @@ more, checkout the chapter \ref{chap:design-overview}.
 % 
 % Basically, instead of
 % having consumers use a single black box, we have them use two: one created by
-% the publisher --- as before --- and one created by the AP. To access a piece of
+% the producer --- as before --- and one created by the AP. To access a piece of
 % content, consumers use both black boxes to generate and present two certificates
 % to the content host; having one isn't sufficient. This means that neither the
-% publisher nor the AP have enough information to make both certificates so
+% producer nor the AP have enough information to make both certificates so
 % compromising one but not the other isn't sufficient to compromise the system.
 % However, again, this isn't free lunch.
 % 
-% For one, up until now the publisher's AP didn't necessarily need to know the
-% structure of the publisher's social network. That is, we could have modified the
+% For one, up until now the producer's AP didn't necessarily need to know the
+% structure of the producer's social network. That is, we could have modified the
 % system to hide this information. However, they need this information to create
 % the black boxes so there's nothing we can do at this point.
 % 
@@ -611,7 +871,7 @@ more, checkout the chapter \ref{chap:design-overview}.
 % 
 % Finally, this isn't the only solution to this problem. Theoretically, we could
 % have tried to find a way to modify the black box to require components from both
-% the AP and the publisher
+% the AP and the producer
 % 
 %  TODO: not quite accurate...
 
@@ -657,82 +917,71 @@ more, checkout the chapter \ref{chap:design-overview}.
 \label{chap:design-overview}
 
 This chapter gives a top-down overview of the DRACL protocol without going into
-any of the crypto or protocol specifics. It also assumes that all members of the
-system have asymmetric key pairs and have some way to securely obtain each
-other's public keys. The specific PKI infrastructure is beyond the scope of the
-core DRACL protocol. First, we give a lightspeed overview of the protocol. Then,
-in the following sections, we explain in further detail. This chapter is
-intended to provide enough information to understand and evaluate DRACL and
-therefore goes into more detail than the Design section (\ref{sec:design}) above
-but is not a full specification for the DRACL protocol.
+any of the crypto or protocol specifics. It also assumes an existing identity
+system that can map identities to public, authenticated keypairs. The specific
+PKI infrastructure is beyond the scope of the core DRACL protocol.
+
+First, we give a lightspeed overview of the protocol. Then, in the following
+sections, we explain in further detail. This chapter is intended to provide
+enough information to understand and evaluate DRACL and therefore goes into more
+detail than the Design section (\ref{sec:design}) above but is not a full
+specification for the DRACL protocol.
 
 \section{Lightspeed Overview}
 
 This section is a lightspeed overview. Think of it as SparkNotes\texttrademark{}
-for DRACL.\todo{This is still somewhat detailed. However, I would like some
-  section somewhere to to contain all this information in one place.}
+for DRACL.
 
-DRACL uses groups as the unit of access control. That is, publishers put their
+DRACL uses groups as the unit of access control. That is, producers put their
 friends in groups and specify which groups should be able to access which
-resources.
+resources. We do this both for enhanced user experience (manually granting
+access to a many of consumers is tedious) and efficiency reasons (ACLs don't
+need to explicitly mention every user that has access).
 
-At any time, the publisher can create, delete, or modify (add/remove members
-to/from) their groups. After a user is removed from a group, they will lose
-access to any existing content when their keys expire. Importantly, they will
-never be able to access any content made available to the group \emph{after}
-they are removed from it.
-  
-Whenever the group assignments change, the publisher uploads a new secret key
-for each of its friends to its AP. However, it doesn't have to update the ACLs
-mentioning the modified group.
-  
-When posting a resource on a content host, the publisher also uploads an opaque
-ACL. The ACL specifies which of the publisher's groups should be able to access
-the content, the identity of the publisher, and the publisher's AP. ACLs never
+When uploading a protected resource to a content host, the producer also uploads
+cryptographically opaque ACL along side it. The ACL internally specifies which
+of the producer's groups should be able to access the content (without revealing
+this information to the content host or consumers) and publicly identifies the
+producer and the producer's AP. ACLs contain no sensitive information and never
 expire.
-  
-When accessing a resource, the consumer first downloads their publisher-specific
-secret key --- the one the publisher uploaded to their AP after modifying their
-groups --- from the publisher's AP if they haven't already and then proves that
-they are a member of the ACL to the content host. This proof reveals only that
-the consumer has chosen to prove that they are a member of the ACL, nothing
-more. Specifically, it doesn't reveal anything about the consumer's identity or
-publisher's social network.
+
+When accessing a protected resource, the consumer must prove membership in the
+ACL. They first download the resource's ACL and learn where to find the
+producer's AP. They then identify themself to the AP and fetch the necessary
+keys and certificates. Then, using these keys and certificates, they prove
+membership in this ACL to the content host. This proof reveals only that the
+consumer has chosen to prove that they are a member of the ACL, nothing more.
+Specifically, it reveals nothing about the consumer's identity to the content
+host or the producer's social network to any party.
+
+At any time, the producer can create, delete, or modify (add/remove members
+to/from) their groups. After a user is removed from a group, they will lose
+access to any existing content when their keys expire. However, any content
+published after a consumer is removed from a group will never be accessible that
+consumer even if they have non-expired keys. After updating a group, the
+producer uploads a new secret key for each of its friends to its AP but does not
+update any ACLs.
   
 Because all parties in DRACL make extensive use of cryptography, we need a way
 to handle the compromise of cryptographic secrets (keys). To do so, we have the
 AP certify all public keys in the system with short-lived certificates. If a
 user believes their keys to be compromised, they can revoke their keys by asking
-their content host to stop signing their keys. We also provide a protocol for
-securely transitioning to a new key --- authenticating the new key out of band
---- and restoring access.
-
-\section{Key Distribution}
-
-In DRACL, consumers use secret keys given to them by publishers when
-authenticating to content hosts. This means they need some way of getting these
-secret keys.
-
-After choosing what groups each consumer should be in, the publisher generates
-one secret key per consumer encoding the groups to which the consumer belongs
-therein. The publisher then encrypts the secret key with the consumers public
-key (signing it as well), then uploads it to the AP along with the consumers
-public key and the identity of their (the consumer's) AP.
-
-To download the key, the consumer asks the publisher's AP for all secret keys
-belonging to them (the consumer). When making this request, the consumer proves
-that their key pair hasn't been revoked by presenting a valid, short-lived
-certificate signed by their (the consumer's) AP.
+their AP to stop signing their keys. We also provide a protocol for securely
+transitioning to a new key --- authenticating the new key out of band --- and
+restoring access.
 
 \section{Authentication}
 \label{sub:authentication}
 
 When attempting to access protected content, the content host first sends the
-content's ACL to the consumer. The consumer then fetches any necessary keys if
-not already cached and pre-verifies that it will be able to successfully
-authenticate against the ACL. If pre-verification succeeds, the consumer and
-content host run the following protocol where \verb=[Secret Key]= is the
-consumer's per-publisher secret key:
+content's ACL to the consumer. The consumer then fetches any necessary keys from
+the producer's if not already cached and pre-verifies that it will be able to
+successfully authenticate against the ACL. If pre-verification succeeds, the
+consumer and content host run the authentication protocol to determine if the
+consumer should be able to access the protected content. In the following
+diagram, \verb=[Secret Key]= is the consumer's per-producer secret key,
+\verb=[ACL]= is the content's ACL, and parts that aren't strictly speaking part
+of the authentication protocol are highlighted in teal (and covered later).
 
 \begin{figure}[H]
     \includegraphics{auth.eps}
@@ -740,11 +989,29 @@ consumer's per-publisher secret key:
 
 After running this protocol, the content host learns precisely that the consumer
 has chosen to authenticate against an ACL and the consumer learns the identity
-of the publisher (listed in the ACL) and how many groups grant them access.
+of the producer (listed in the ACL) and how many groups grant them access to the
+resource (this is simply an artifact of the crypto).
 
 Finally, if the consumer's browser fails to generate the \verb=[Proof]=, it
 warns the user. We do this to discourage content hosts from fingerprinting
 consumers (see \ref{sub:fingerprinting}).
+
+\section{Key Distribution}
+
+In DRACL, consumers use secret keys given to them by producers when
+authenticating to content hosts. This means they need some way of getting these
+secret keys.
+
+After choosing what groups each consumer should be in, the producer generates
+one secret key for each consumer encoding the groups to which the consumer
+belongs therein. The producer then encrypts the secret key with the consumer's
+public key (signing it as well), then uploads it to the AP along with the
+consumer's public key. This is a slight simplification as the producer gives the
+AP a few extra pieces of information that we'll discuss in the next section.
+
+To download the key, the consumer asks the producer's AP for all secret keys
+belonging to them (the consumer). When making this request, the consumer proves
+that their key hasn't been revoked using the identity system.
 
 \section{Account Compromise Recovery}
 
@@ -755,50 +1022,49 @@ There are two parts to account compromise recovery:
 \item Account restoration.
 \end{compactenum}
 
-To support account lockout, DRACL uses short-lived certificates (signed by the
-AP) in every part of the protocol. To lock down a user's account, an AP simply
-stops signing new certificates for the user in question. Unfortunately, this
-won't take effect till all outstanding keys have expired (on the order of
-hours).
+In this section, we assume that the underlying identity system has a way of
+marking identity keys as invalid/revoked. For example, the identity system could
+attach a short-lived certificate to every identity key.
 
-To prevent publishers with revoked keys from gaining or granting access to
-content they own, we include a short-lived certificate signed by the publisher's
-AP in the ``setup material'' of the authentication protocol. To lock down an
-account, the AP simply stops issuing this certificate. This will prevent anyone
-from authenticating against this user's ACLs.
+To support account lockout, (1) all keys issued by DRACL expire rapidly (on the
+order of hours) and (2) both the producer \emph{and} the producer's AP must work
+together to make the keys necessary to prove membership in ACLs. This means that
+a compromise of either the producer or the AP doesn't compromise the entire system.
 
-To prevent consumers with revoked keys from accessing content owned by other
-users, we use a two-key system when authenticating against ACLs. Basically,
-every ACL actually consists of two sub-ACLs: one controlled by the AP and one
-controlled by the publisher. When the consumer goes to the publisher's AP to ask
-for their keys, they fetch both the key controlled by the AP and the key
-controlled by the publisher. This allows the publisher's AP to revoke access to
-any given consumer even if the publisher never comes online. To actually revoke
-a consumers keys, the consumer's AP simply stops signing them. Once their
-current certificate expires, the next time the consumer attempts to fetch keys
-from a publisher's APs they will be unable to present a valid certificate.
+To prevent an attacker with compromised but revoked producer keys from accessing
+that producer's content, we include a short-lived certificate signed by the
+producer's AP in the ``setup material'' of the authentication protocol. If a
+producer notifies their AP that their keys have been compromised, the AP will
+stop producing this certificate effectively locking out all access to the
+producer's content.
 
-To restore an account, the AP and user work together to transition the user to a
-new keypair. To do this, the user generates a new keypair and a transition
-certificate signed with their old keypair. After proving their identity to the
-AP (out of band), the AP also signs the transition statement and starts signing
-the new keypair as usual.
+To prevent an attacker with compromised but revoked consumer keys from accessing
+content from other producers, we use a two-key system when authenticating
+against ACLs. Basically, every producer key is actually two keys: one issued by
+the producer that never expires and one issued by the producer's AP that expires
+quickly. When the consumer goes to the producer's AP to ask for their keys, they
+fetch both keys. When the consumer authenticates against an ACL, they use both
+keys. This allows the producer's AP to revoke access to any given consumer by
+simply not issuing its short-lived key. Importantly, the AP can do so without
+help from the producer because the producer may be dead for all we know.
 
-After transitioning to a new key, users do not proactively replace old ACLs with
-ones made with the new key as this would require additional work for content
-hosts. Instead, they continue to distribute one consumer key for each keypair
-ever used. While these old keys could have been compromised, we assume that the
-secondary key controlled by the AP has not been so this is still secure.
+To restore an account, we rely on the identity system. To support account
+restoration, the underlying identity system must provide a mechanism for
+securely transitioning from one (compromised) identity keypair to another.
+
+However, after transitioning to a new key, users do not proactively replace old
+ACLs with ones made with the new key as this would require additional work for
+content hosts. Instead, they continue to distribute one consumer key for each
+keypair ever used. While these old keys could have been compromised, we assume
+that the secondary key controlled by the AP has not been so this is still
+secure.
 
 \chapter{Discussion}
 
-Above all, DRACL aims to be practical --- that is, usable in practice, not only
-in theory. Additionally, DRACL aims to be secure, privacy preserving, and
-developer and user friendly.
-
-\section{Practical}
-
-% TODO ....
+Above all, DRACL is practical --- that is, usable in practice, not only in
+theory. Additionally, DRACL is secure, privacy preserving, and developer and
+user friendly. This section evaluates how we stack up against our requirements
+for a ``good'' access control system for the web.
 
 \section{Secure}
 \label{sub:secure}
@@ -810,12 +1076,12 @@ account compromise, supports efficient revocation, discourages unauthorized
 delegation of privileges, and avoids being a vector for denial of service
 attacks.
 
-Only authorized users, the publisher, and the content host are able to
+Only authorized users, the producer, and the content host are able to
 access resources protected by DRACL\@. Specifically, DRACL doesn't allow the AP
 to impersonate its users and access their content. A malicious AP may at most
 prevent a user from accessing content they should be able to access.
 
-Both consumers and publishers are able recover and secure compromised
+Both consumers and producers are able recover and secure compromised
 accounts. We achieve this by having APs act as semi-trusted third parties that
 certify their user's keys with short-term certificates. Once an AP learns that
 one of its users has been compromised, it stops signing their keys. The AP then
@@ -823,22 +1089,14 @@ works with the user to transition the user to a new set of keys (authenticating
 the user's identity out-of-band). For a quick overview of this protocol, see
 section \ref{sub:authentication}.
 
-publishers can efficiently revoke access to content. To facilitate this,
-DRACL allows users to be removed from groups without updating every ACL
-mentioning the now modified group. Much of the complexity of DRACL stems from
-this requirement. Unfortunately, in order to do this efficiently, we sacrificed
-some security. Specifically, content published by a publisher before they
-remove a consumer from a group will remain accessible to that consumer until
-their publisher-specific certificate expires. We mitigate this by making
-publisher-specific certificates short-lived --- they expire on the order of hours.
-
-Consumers are discouraged from delegating access. In DRACL, we chose to do this
-by making delegation all or nothing. That is, a consumer can either delegate
-access to \emph{all} content shared with them by a \emph{particular publisher} or can delegate access to no content. We would prefer to make this a true
-all or nothing by saying that a consumer can only delegate access to all content
-of which they are authorized consumers however, this is impossible without
-introducing some concept of real-world identity. A user could simply make one
-``identity'' per ``friend''. \todo{Do we really care about this?}
+Producers can efficiently revoke access to content. To facilitate this, DRACL
+allows users to be removed from groups without updating every ACL mentioning the
+now modified group. Much of the complexity of DRACL stems from this requirement.
+Unfortunately, in order to do this efficiently, we sacrificed some security.
+Specifically, content published by a producer before they remove a consumer from
+a group will remain accessible to that consumer until their producer-specific
+certificate expires. We mitigate this by making producer-specific certificates
+short-lived --- they expire on the order of hours.
 
 Finally, DRACL cannot interfere with the operation of content hosts. To achieve
 this, we guarantee that all DRACL operations performed by the content host will
@@ -848,39 +1106,50 @@ initiate network requests on behalf of DRACL\@.
 \section{Privacy Preserving}
 \label{sec:privacy}
 
-DRACL preserves the privacy of both publishers and consumers. Preferably,
-DRACL would reveal nothing other than whether or not some user should be able to
+DRACL preserves the privacy of both producers and consumers. Preferably, DRACL
+would reveal nothing other than whether or not some user should be able to
 access some resource. Unfortunately, this goal is impossible to achieve given
-our efficiency constraints. However DRACL provides practically optimal privacy
-given our performance constraints and some choices we've made when confronted
-with unavoidable privacy/security trade-offs.
+our efficiency constraints. However DRACL provides reasonable privacy given our
+performance constraints and some choices we've made when confronted with
+unavoidable privacy/security trade-offs.
+
+Perfect privacy is impossible given our performance constraints because not
+doing something reveals that something hasn't happened. For example, because the
+producer does not update ACLs after removing consumers from groups, a malicious
+content host and consumer can collude to definitively learn that the consumer
+has been removed from a group (because the ACL hasn't been updated so the group
+structure must have been).
+
+Below, we summarize what information DRACL reveals to the various parties involved:
 
 \begin{description}
-\item[Everyone] The publisher is recorded in the ACL itself so the content
-  host and anyone attempting to access a resource learns the identity of the
-  publisher. Additionally, anyone can learn whether or not a publisher
-  has put them in some group.
+\item[Everyone] Every ACL includes a pseudonym for identifying the producer so
+  the content host and anyone attempting to access a resource learns something
+  about the identity of the producer. This doesn't mean they learn the ``real''
+  identity of the producer but it's still an information leak. Additionally,
+  anyone can learn whether or not a producer has put them in at least one.
 \item[Content Host] Content hosts know the content and learn whether or not a
   given (anonymous) consumer chooses to prove that they have access to piece of
   content.
 \item[Consumers] Consumers learn whether or not they can access any resource at
   any point in time. However, they do not learn \emph{why} they have access.
   That is, they do not learn what groups they are in or what groups grant them
-  access to any given resource. See section \ref{sub:practically_optimal} for some
-  caveats and exceptions.
-\item[Access Control Providers] access control providers learn their users
+  access to any given resource. See section \ref{sub:resonable_privacy} for
+  some caveats and exceptions (specifically, they learn how many groups grant
+  them access).
+\item[Authentication Providers] authentication providers learn their users'
   social networks but can't act on behalf of their users and access their
   content.
-\item[Publisher] An honest but curious publisher cannot learn if and
+\item[Producer] An honest but curious producer cannot learn if and
   when specific friends access their content. Given sufficient collusion and
-  effort, publishers can learn something about who accesses what when but
+  effort, producers can learn something about who accesses what when but
   this is unlikely to be an issue in practice.
 \end{description}
 
 The following sections detail what various privacy leaks we do have and why.
 
-\subsection{Practically Optimal}
-\label{sub:practically_optimal}
+\subsection{Reasonable Privacy}
+\label{sub:resonable_privacy}
 
 We have three privacy leaks that aren't entirely a result of some performance or
 privacy trade-off.
@@ -894,10 +1163,10 @@ using for authentication, not the result of a deliberate efficiency trade-off.
 
 Second, anyone can learn whether or not an ACL has changed since the last time
 they accessed a piece of content. In theory, one could randomize challenges so
-that they look fresh every time. However this is likely more trouble
-than it is worth as, for security reasons, we have content hosts present a
-signed copy of the ACL along with challenges. Unfortunately, this does allow
-users to prove that they have been added to or removed from a group with
+that they look fresh every time. However this is likely more trouble than it is
+worth as, for security reasons, we have content hosts present a signed copy of
+the ACL along with challenges. Unfortunately, this does allow users to prove
+that they have been added to or removed from some (but not which) group with
 certainty by learning that they have gained/lost access to content without the
 ACL changing. However, regardless of what we do, consumers can learn this with
 high probability, but not with certainty, by simply assuming that gaining or
@@ -907,57 +1176,58 @@ changed in a short period of time.
 
 Third, consumers can determine a lower bound on when an ACL may have been crated
 because we record the ``time'' --- technically a monotonic counter, not the
-actual time --- the publisher last removed a consumer from a group before creating
+actual time --- the producer last removed a consumer from a group before creating
 an ACL in the ACL itself. This allows us to guarantee that all content published
 \emph{after} a consumer is removed from a group is never accessible to that
 consumer.
 
-\subsection{The Publisher Is Public}
+\subsection{The Producer Is Public}
 
-In DRACL, a publisher (the author of an ACL) is publicly visible in the ACL
-itself. We had four options:
+In DRACL, a pseudonym of the producer (the author of an ACL) is publicly visible
+in the ACL itself. We had four options:
 
 \begin{compactenum}
-\item Make the publisher public (what DRACL does).
-\item Allow users who are authorized consumers of \emph{some} content controlled
-  by the publisher to learn the identity of the author.
-\item Reveal the publisher to the content host only.
-\item Don't reveal the publisher at all.
+\item Make the a pseudonym of the producer public (what DRACL does).
+\item Allow ``friends'' to learn the identity of the producer. By ``friends'' we
+  mean authorized consumers of \emph{some} content controlled by the producer.
+\item Reveal the producer to the content host only.
+\item Don't reveal the producer at all.
 \end{compactenum}
 
 It's impossible to provide guarantee 4 without sacrificing performance. In
 DRACL, we avoid updating individual ACLs (we don't even contact the content
 hosts) when the members of a group changes. To do this, we need to use some
-additional publisher-specific information during authentication to learn if the
+additional producer-specific information during authentication to learn if the
 consumer is a member of one of the groups listed in the ACL\@. Therefore some
-party participating in authentication will learn the publisher of the ACL based on
-what publisher-specific information they end up using. As only the content host and
+party participating in authentication will learn the producer of the ACL based on
+what producer-specific information they end up using. As only the content host and
 consumer are directly involved in authentication (for performance and
-reliability reasons) one of those two parties will learn who the publisher is.
+reliability reasons) one of those two parties will learn who the producer is.
 
 Providing guarantee 3 would either violate our security guarantees and open
-content hosts up to denial of service attacks or force the publisher to
-contact every affected content host when an ACL changes. As noted above, either
-the content host or the consumer needs to learn the publisher-specific information.
-To prevent the consumer from learning the identity of the publisher, we'd either
-have to have the content host fetch this information from the publisher or have the
-publisher send this information to the content host. The first option violates our
-rule that the content host must never make network requests on behalf of DRACL\@.
-As a matter of fact, this would be the worst case scenario: the content host
-would be making a network request to a server specified by a client (the publisher) on behalf of a client (the consumer). On the other hand, having the publisher
-send the publisher-specific information to each content host ahead-of-time would
-complicate the content hosts (they would have to listen for ACL updates) and
-force the publishers to contact every content host they have ever used when
-they change the members of one of their groups.
+content hosts up to denial of service attacks or force the producer to contact
+every affected content host when an ACL changes. As noted above, either the
+content host or the consumer needs to learn the producer-specific information.
+To prevent the consumer from learning the identity of the producer, we'd either
+have to have the content host fetch this information from the producer or have
+the producer send this information to the content host. The first option
+violates our rule that the content host must never make network requests on
+behalf of DRACL\@. As a matter of fact, this would be the worst case scenario:
+the content host would be making a network request to a server specified by a
+client (the producer) on behalf of a client (the consumer). On the other hand,
+having the producer send the producer-specific information to each content host
+ahead-of-time would complicate the content hosts (they would have to listen for
+ACL updates) and force the producers to contact every content host they have
+ever used when they change the members of one of their groups.
 
 If we were to provide guarantee 2, DRACL would either scale horribly at the tail
 or provide dubious privacy benefit. To access a piece of content, users would
-have to linearly search through a list of publisher-specific secrets from every user
+have to linearly search through a list of producer-specific secrets from every user
 who has granted them access to some piece of content. For popular users, this
 list could be very large. Worse, the size of this list scales based on actions
 taken by \emph{other} users, not the consumer in question. We could use a hybrid
-approach where ACLs list the publisher's AP but not the publisher. This
-way, consumers would only need to remember keys from publishers whose
+approach where ACLs list the producer's AP but not the producer. This
+way, consumers would only need to remember keys from producers whose
 content they frequently access; they can fetch other keys on-demand from the
 listed APs. Unfortunately, the users who care about their privacy the most and
 therefore run their own APs will effectively be named in their ACLs because they
@@ -966,63 +1236,81 @@ are the \emph{only} user of their APs.\todo{I feel like there is a cleaner
 
 \subsection{The AP Learns The Social Network}
 
-In DRACL, APs learn the social networks of their publishers. Specifically,
-they learn the composition of their publisher's groups.
+In DRACL, APs learn the social networks of their producers. Specifically,
+for any given producer, they learn which consumers that producer has put in at
+least one group. However, they do not learn the group assignments.
 
-...TODO...
+This is a consequence of how we allow APs to revoke a consumer's access to a
+producer's content without involving that producer. Basically, the AP needs to
+be able to verify that the consumer's key has not been revoked when the consumer
+fetches their keys; this identifies the consumer to the AP. Furthermore,
+remember that the AP issues its own keys to consumers on behalf of its
+producers. It needs to know for which producer it's issuing these keys so it can
+properly sign them. This means that AP knows for and to whom it's issuing the
+keys so it knows that the producer has put that consumer in a group.
+
+We'd like to note that this is simply a problem with our design, not a
+fundamental limitation given our requirements. However, hiding this information
+would be extremely complicated and would require multiple rounds of
+communication between the producer and their AP, some of them over anonymizing
+networks.\todo[inline]{David, I've tried explaining how we could go about this
+  to illustrate how difficult it is but my explanation requires a partially
+  blind homomorphic signature algorithm.}
 
 \subsection{Fingerprinting}
 \label{sub:fingerprinting}
 
 One problem with any access control scheme is that the content host can
-fingerprint users based on what they can and cannot access. The consumer could
-make every access request look like it's coming from a new client but this is
-infeasible in practice. Instead DRACL allows the user to decide if and when to
-authenticate (always for a content host, always for a publisher on a content
-host, once, not now, never) and warns users (loudly) when authentication fails.
-This way, consumers control what information they give to content hosts and
-content hosts can only confirm answers they already suspect.
+fingerprint consumers based on what they can and cannot access. The consumer
+could make every access request look like it's coming from a new client but this
+is infeasible in practice. Instead DRACL allows the user to decide if and when
+to authenticate and warns users (loudly) when authentication fails. This way,
+consumers control what information they give to content hosts and content hosts
+can only confirm answers they already suspect. While there are other ways for
+content hosts to identify users (i.e., they could be logged in) DRACL should not
+leak this information.
 
 \subsection{Timing and Caching}
 
 For increased performance and reliability, consumers cache keys retrieved from
-publishers. Unfortunately, caching tends to leak timing information. In our
+producers. Unfortunately, caching tends to leak timing information. In our
 case, we were worried that a curious content host could learn whether or not a
-consumer ``knew'' a publisher even if the consumer chose not to authenticate
-based on whether or not the consumer had already cached the publisher's key.
+consumer ``knew'' a producer even if the consumer chose not to authenticate
+based on whether or not the consumer had already cached the producer's key.
 
 To mitigate this this, consumers pre-verify (\ref{sub:authentication}) if they
 will be able to access a piece of content. If this pre-verification fails, they
 never even initiate the authentication protocol. This means that the content
 host can only possibly learn timing information if the user has access to the
 content in question and has chosen to access it. However, in this case, the
-publisher already learns that the consumer ``knows'' the publisher.
+producer already learns that the consumer ``knows'' the producer.
 
 \subsection{Side Channels}
 
-Finally, they will likely learn about the consumer's browser, IP address, etc.
-This is beyond the scope of DRACL system and users that require true anonymity
-should use the Tor Browser\cite{tor} or Tails\cite{tails}.
+Finally, content hosts will likely learn about the consumer's browser, IP
+address, etc. This is beyond the scope of DRACL system and users that require
+true anonymity should use the Tor Browser\cite{tor} or Tails\cite{tails}.
 
 \section{Developer Friendly}
 
 To be developer friendly, DRACL wraps all content-host logic in a simple
-(interface wise), environment-agnostic library.
+(interface wise), environment-agnostic library. To keep it simple, we only
+export two easy-to-understand functions to the content host: \verb=is_acl= and
+\verb=authenticate=.
 
-To keep it simple, we only export three functions: \verb=is_acl=,
-\verb=validate_replacement=, and \verb=authenticate=. \verb=is_acl= simply
-verifies that an ACL is well formed. \verb=validate_replacement= takes an old
-ACL and an ACL transition statement and returns either the new ACL that should
-replace the old ACL or an error. Finally, \verb=authenticate= takes an opaque
-consumer input and an opaque ACL and returns one of: \verb=GRANT=,
-\verb=DENY(Reason)=, \verb=CONTINUE(OpaqueReply)= where \verb=OpaqueReply=
-should be returned to the client as-is. This minimal interface should make it
-easy to integrate DRACL with existing systems.
+\verb=is_acl= simply verifies that an ACL is well formed. The content host
+should use this function to verify that ACLs uploaded by producers are valid
+(simply to avoid storing invalid ACLs).
 
-Additionally, these functions perform \emph{no} IO and run in constant time (as
-noted in the security~\ref{sub:secure} section above). This significantly
-reduces content host implementation complexity because it means that these
-functions are environment agnostic and can be called synchronously.
+\verb=authenticate= allows the content host to check whether or not a consumer
+is a member of an ACL. It takes an opaque consumer input and an opaque ACL and
+returns one of: \verb=GRANT=, \verb=DENY(Reason)=, \verb=CONTINUE(OpaqueReply)=
+where \verb=OpaqueReply= should be returned to the client as-is.
+
+In addition to being simple, these functions perform \emph{no} network request
+and run in constant time (as noted in the security~\ref{sub:secure} section
+above). This significantly reduces content host implementation complexity
+because it means that these functions can be called synchronously.
 
 Finally, access control checks never lead to database writes. This is important
 for high-performance applications where reads are often performed out of
@@ -1048,7 +1336,220 @@ unobtrusive. Specifically:
 These last two issues have been cited~\cite{persona-fail} by Mozilla as reasons
 reasons their authentication system, Persona, failed.
 
-\chapter{Design}
+\chapter{Specification}
+
+This section is simply an implementation recipe. You should \emph{only} read
+this if you actually want to implement DRACL. If you just want to understand it,
+read the Design Overview chapter (chapter \ref{chap:design-overview}).
+
+\section{Overview}
+
+DRACL uses 4 cryptographic libraries:
+
+1. 
+
+\section{Datastructures}
+
+First, we need to understand the many different types of keys in this system:
+
+\begin{description}
+\item[Consumer/Producer Identity Key] The consumer and producer both have
+  asymmetric identity key pairs. These are plain-old PGP keys that are used by
+  the consumer, producer, and AP but \emph{not} the content host.
+\item[ACL Key] Every producer has one or more asymmetric ACL signing key.
+  Producers only need more than one if previous keys have been compromised. We
+  actually use nacl here for simplicity. % TODO: Also, some privacy...
+\item[AP Key] Every AP has a standard SSL certificate issued by a trusted CA.
+\item[ACL Key Certificate] We've been calling this ``setup material'' up till
+  now. TODO
+\end{description}
+
+Here, we define the datastructures that DRACL uses. For convenience, we encode
+all messages and datastructures in CBOR. A more efficient encoding (e.g.
+Protocol Buffers) could be used at a future stage.
+
+First, we define a Signed Envelope.
+
+\begin{lstlisting}[caption={Signed Envelope},float,floatplacement=H]
+{
+  // Type of the underlying data.
+  type: string,
+
+  // x509, pgp, or nacl
+  format: string,
+
+  data: data_bytes,
+  signature: signature_bytes,
+}
+\end{lstlisting}
+
+When we use \verb=signed(method, key, type, data)= in the following message
+definitions, we mean that the message of type ``type'' is wrapped in a signed
+envelope with signature ``signature'' using method ``method''. Note: we don't
+specify the key because *how* a message should be verified depends on the
+message type.
+
+The ACL is defined as follows (always signed with the producer's key).
+
+\begin{lstlisting}[caption={ACL},float,floatplacement=H]
+signed("nacl", acl_key, "acl", {
+    // The producer's AP's fully qualified domain name. Used for verifying
+    // certificates produced by the AP.
+    ap: string,
+
+    // The ACL (public) Key (acl_key)
+    acl_key: bytes,
+
+    // An monotonically increasing integer used to ensure that Keys issued
+    // before a user was added to a group can never be used to authenticate
+    // against ACLs issued after.
+    epoch: u64,
+
+    // The current ACL format. Versioned in case we decide to change the
+    // underlying crypto.
+    acl_v1: {
+        producer: {
+            c1: [u256], // Array of C1. See crypto.
+            c2: u256, // C2.
+        },
+        ap: {
+            c1: [u256],
+            c2: u256,
+        }
+    },
+
+    // Small opaque user-data blob (should be symmetrically encrypted by the
+    // producer). This allows the producer to record information about the ACL
+    // in the ACL itself (e.g., a description of the groups/users listed in the ACL).
+    user_data: bytes,
+})
+\end{lstlisting}
+
+Each consumer gets a secret component from...
+
+\begin{lstlisting}[caption={AP Secret Component},float,floatplacement=H]
+signed("pgp", producer_key, "producer_secret", {     
+    // The producer's name (for UI purposes only, not authoritative).
+    // We put this *inside* the producer_secret for two reasons.
+    //  1. Nobody but the producer can name themselves.
+    //  2. The AP doesn't get to know how the producer chooses to identify
+    //     themself to a particular consumer. 
+    producer_name: string,
+    
+    // A short description of the producer. This can be used to informally
+    // authenticate the producer to the consumer.
+    producer_description: string,
+
+    // *All* the producer's acl public keys.
+    producer_keys: [bytes],
+
+    epoch: u64,
+
+    // The actual secret key. See crypto for the internals...
+    secret_v1: {
+        k1: [u256],
+        k2a: u256,
+        k2b: u256,
+    },
+})
+\end{lstlisting}
+
+\begin{lstlisting}[caption={AP Key Bundle},float,floatplacement=H]
+encrypted(consumer_key, signed("x509", ap_key, {     
+    // The AP's fully qualified domain name.
+    ap: string,
+
+    // The hash of the public component.
+    ap_public_component_hash: bytes,
+
+    // The AP's certificate chain. Used to verify this message.
+    ap_certificate: bytes,
+
+    // The producer's pgp key id
+    producer_key: bytes,
+
+    // An encrypted copy of the producer secret for this consumer.
+    producer_secret: bytes,
+
+    epoch: u64,
+
+    // The actual secret key. See crypto for the internals...
+    secret_v1: {
+        k1: [u256],
+        k2a: u256,
+        k2b: u256,
+    },
+}))
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Producer Public Component},float,floatplacement=H]
+signed("xiw09", producer_key, "producer_public", {     
+    // The producer's public key fingerprint.
+    producer_public_key: bytes,
+
+    // The AP with which this public component should be used.
+    // This shouldn't be strictly necessary but it can't hurt.
+    ap: string,
+
+    // Unix timestamp when this key expires.
+    // In general, the producer's public component will never expire (that's
+    // why we have an AP).
+    //
+    // Zero means never.
+    expires: u64,
+
+    epoch: u64,
+
+    // The "public component". See Crypto.
+    public_v1: u256,
+})
+\end{lstlisting}
+
+\begin{lstlisting}[caption={AP Public Component},float,floatplacement=H]
+signed("x509", ap_key, "ap_public", {     
+    // The AP's fully qualified domain
+    ap: string,
+
+    // The (public key fingerprint of the) producer for which this public
+    // component has been constructed.
+    producer_key: bytes,
+
+    // The full x509 certificate chain for this producer
+    //
+    // This should be verified with your favorite SSL implementation and then
+    // the associated public key should be used to validate the signature on
+    // this message
+    certificate: bytes,
+
+    // Unix timestamp when this key expires.
+    //
+    // Zero means never. That's probably not the best idea.
+    expires: u64,
+
+    epoch: u64,
+
+    // The "public component". See Crypto.
+    public_v1: u256,
+})
+\end{lstlisting}
+
+\section{Server Side API}
+
+As discussed previously, we expose two: functions as a part of the server API.
+
+\begin{description}
+\item [fn is\_acl(acl: bytes) -> bool] Validates that the ACL is well-formed.
+\end{description}
+
+To keep it simple, we only export two functions: \verb=is_acl= and \verb=authenticate=. \verb=is_acl= simply
+verifies that an ACL is well formed. 
+Finally, \verb=authenticate= takes an opaque
+consumer input and an opaque ACL and returns one of: \verb=GRANT=,
+\verb=DENY(Reason)=, \verb=CONTINUE(OpaqueReply)= where \verb=OpaqueReply=
+should be returned to the client as-is. This minimal interface should make it
+easy to integrate DRACL with existing systems.
+
+
 
 \section{Crypto}
 
@@ -1057,11 +1558,11 @@ reasons their authentication system, Persona, failed.
 %\chapter{Design}
 %
 %This section describes the core design and does not include concrete APIs. To
-%make this design easy to follow, we'll first map the abstract publisher and
+%make this design easy to follow, we'll first map the abstract producer and
 %consumer to concrete entities:
 %
 %\begin{compactitem}
-%    \item The publisher is Penny.
+%    \item The producer is Penny.
 %    \item The consumers are Kevin and Cary.
 %\end{compactitem}
 %
@@ -1092,7 +1593,7 @@ reasons their authentication system, Persona, failed.
 %content.  We plan to use services like keybase.io~\cite{keybase} to help with
 %the initial key-exchange process.
 %
-%Now that they can securely identify each other, Penny the publisher could just
+%Now that they can securely identify each other, Penny the producer could just
 %tell FoShare to let Kevin and Cary (the consumers) access her photo
 %(identifying them by their public keys). However, this would introduce a privacy
 %concern because flicker would be able to learn the identities of the two
@@ -1102,24 +1603,24 @@ reasons their authentication system, Persona, failed.
 %\cite{acp2} (based on an Access Control Polynomial (ACP) scheme described in
 %\cite{acp}). ACP will allow us to efficiently encrypt a shared secret token with
 %multiple secret keys without revealing anything about the secret keys. To be
-%able to use ACP, Penny the publisher must first generate secret keys (called
+%able to use ACP, Penny the producer must first generate secret keys (called
 %consumer keys) for every friend with whom she wishes to share content and
 %distribute them using her AP (described in the next section).
 %
-%\subsection{Access Control Provider (AP)}
+%\subsection{Authentication Provider (AP)}
 %
-%The Access Control Provider (AP) is simply our way to deal with the fact that
-%publishers and consumers aren't always online and, even when they are, they
+%The Authentication Provider (AP) is simply our way to deal with the fact that
+%producers and consumers aren't always online and, even when they are, they
 %are often hidden behind firewalls. The AP will host consumer keys, issue
 %certificates of membership (as described in the Groups and Authentication 2.0
-%sections), and help both consumers and publishers generate ACLs, manage
-%friend lists, authenticate, etc. Additionally, publisher and APs will share
-%a ``publisher secret'' symmetric key which will be useful in the following sections.
+%sections), and help both consumers and producers generate ACLs, manage
+%friend lists, authenticate, etc. Additionally, producer and APs will share
+%a ``producer secret'' symmetric key which will be useful in the following sections.
 %An AP is to DRACL as an Email Provider is to Email.
 %
-%For now, publishers must trust their APs to not be actively curious. That
-%is, an actively curious AP can access any content owned by a publisher.
-%Note, however, that publishers do not *report* the content they own to their APs so
+%For now, producers must trust their APs to not be actively curious. That
+%is, an actively curious AP can access any content owned by a producer.
+%Note, however, that producers do not *report* the content they own to their APs so
 %passively curious APs should learn nothing about their content. We may choose to
 %limit AP power in the future but doing so will impact usability and performance.
 %
@@ -1139,9 +1640,9 @@ reasons their authentication system, Persona, failed.
 %Now that Penny has given Kevin and Cary secret keys, she can create an ACL using
 %ACP\@. The ACL has three parts: a challenge, a verifier, and an encrypted
 %description. The challenge includes an ACP encrypted random content token, the
-%domain of the content host authorized to use this ACL, and the publisher's
+%domain of the content host authorized to use this ACL, and the producer's
 %signature. The verifier is just the content token (unencrypted). The description
-%is some additional data (encrypted with the publisher secret) that the publisher
+%is some additional data (encrypted with the producer secret) that the producer
 %and AP can use to reconstruct the ACL\@. To keep the size of ACL within
 %reasonable limits, we will, for now, limit the number of users that can be
 %granted access to a particular piece of content to 150. In total, an ACL should
@@ -1162,10 +1663,10 @@ reasons their authentication system, Persona, failed.
 %            ]),
 %            content_host: "foshare.com"
 %        },
-%        publisher_signature: ECDSA(Penny_Private_Key, data),
+%        producer_signature: ECDSA(Penny_Private_Key, data),
 %    },
 %    verifier: content_token,
-%    description: Encrypted(Penny_publisher_secret, [
+%    description: Encrypted(Penny_producer_secret, [
 %        "Kevin",
 %        "Cary"
 %    ])
@@ -1225,7 +1726,7 @@ reasons their authentication system, Persona, failed.
 %\subsubsection{Cliques}
 %
 %In DRACL, a clique is a grouping of consumers known only to an individual
-%publisher. Cliques preserve membership privacy (it's impossible for two members
+%producer. Cliques preserve membership privacy (it's impossible for two members
 %of a clique to determine whether or not they are in the same clique) however,
 %new clique members will not automatically be granted access to content
 %previously made available to the clique and removed clique members will retain
@@ -1244,11 +1745,11 @@ reasons their authentication system, Persona, failed.
 %content ever made available to an organization when they become members and
 %lose access if their memberships are revoked.
 %
-%Organizations are not simply an abstraction. Each organization has a publisher
+%Organizations are not simply an abstraction. Each organization has a producer
 %unique permanent 64bit ID\@. However, consumers never learn these IDs and content
 %hosts only learn about organizations used on their service. % TODO: WORDING
 %
-%For example, let's say that Penny the publisher now wants to work on a her 6.824
+%For example, let's say that Penny the producer now wants to work on a her 6.824
 %project with Kevin and Cary. She could just give them access to each piece of
 %content individually but that would be cumbersome, especially if she needs to
 %add another classmate to the project. So, instead, she creates a ``6.824
@@ -1259,7 +1760,7 @@ reasons their authentication system, Persona, failed.
 %Authentication 1.0 section. Basically, we argue that if a group contains more
 %than 150 users, learning that two users are a member of the same group reveals
 %relatively little to the content host beyond the fact that they know the
-%publisher.
+%producer.
 %
 %\note{We chose 150 because it is Dunbar's \cite{dunbar} number. While not a hard
 %limit on social group sizes, we feel this is a generous upper bound on the
@@ -1292,14 +1793,14 @@ reasons their authentication system, Persona, failed.
 %\note{MD5 is sufficiently secure because we don't care about collision
 %resistance.}
 %
-%Next, we generate a shared secret using a well-known epoch published by the  the publisher must also give the content host a
-%shared secret. We use derive this secret from the publisher's secret
-%(\texttt{SHA256("content host domain"|publisher secret)}) so that content hosts
-%must only remember one shared secret per publisher and publishers don't have to
-%remember any additional shared secrets beyond the \texttt{publisher secret}.
+%Next, we generate a shared secret using a well-known epoch published by the  the producer must also give the content host a
+%shared secret. We use derive this secret from the producer's secret
+%(\texttt{SHA256("content host domain"|producer secret)}) so that content hosts
+%must only remember one shared secret per producer and producers don't have to
+%remember any additional shared secrets beyond the \texttt{producer secret}.
 %
 %\note{To make these ACLs ``stand alone,'' content hosts may wish to store this
-%shared secret along with each ACL instead of storing it once per publisher.}
+%shared secret along with each ACL instead of storing it once per producer.}
 %
 %
 %The following is the example ACL from our story for the project's final report.
@@ -1319,7 +1820,7 @@ reasons their authentication system, Persona, failed.
 %            ],
 %            content_host: "foshare.com"
 %        },
-%        publisher_signature: ECDSA(Penny_Private_Key, data),
+%        producer_signature: ECDSA(Penny_Private_Key, data),
 %    },
 %    verifier: {
 %        content_token: content_token,
@@ -1328,7 +1829,7 @@ reasons their authentication system, Persona, failed.
 %            MD5(some_other_org|"foshare.com")
 %        ] 
 %    },
-%    description: Encrypted(Penny_publisher_secret, {
+%    description: Encrypted(Penny_producer_secret, {
 %        organizations: [824_project, some_other_org],
 %        acp: []
 %    })
@@ -1341,7 +1842,7 @@ reasons their authentication system, Persona, failed.
 %
 %Before being able to prove membership in an organization, consumers need to know
 %to which organizations they belong. To learn this, they simply authenticate with
-%the publisher's AP and then ask ``which organizations do I belong to?''. The AP
+%the producer's AP and then ask ``which organizations do I belong to?''. The AP
 %responds with a list of \texttt{("Organization Name", org\_id)} tuples. In our
 %example, Cary would receive the following from Penny's AP:
 %\texttt{("6.824 Project", 824\_org)}.
@@ -1362,15 +1863,15 @@ reasons their authentication system, Persona, failed.
 %would like to use to authenticate. Assuming the consumer decides to authenticate
 %as a member of one of the organizations, he or she must then either obtain a
 %certificate of membership (for that group, for a specific content host) from the
-%publisher's AP or use a cached certificate. Content hosts should generally cache
+%producer's AP or use a cached certificate. Content hosts should generally cache
 %knowledge of group memberships.
 %
 %\note{Browsers should remember this choice and automatically authenticate with
 %that organization on this content host in the future.}
 %
-%A certificate of membership is simply a certificate issued by the publisher's AP
+%A certificate of membership is simply a certificate issued by the producer's AP
 %and symmetrically signed with the secret shared by the content host and the
-%publisher (see the Generating an ACL 2.0 section) stating: ``The bearer of this
+%producer (see the Generating an ACL 2.0 section) stating: ``The bearer of this
 %certificate is a member of \texttt{MD5(content\_host\_name, organization ID)}. issued:
 %\texttt{now}, expires \texttt{some time from now}.'' For example, Cary's certificate
 %of membership for ``foshare.com'' would be (symmetric signature omitted):
@@ -1387,7 +1888,7 @@ reasons their authentication system, Persona, failed.
 %\end{figure}
 %
 %To obtain a certificate of membership, the consumer authenticates with the
-%publisher's AP and then simply asks for one. It's up to the publisher to verify
+%producer's AP and then simply asks for one. It's up to the producer to verify
 %that this consumer is a member of specified the organization.
 %
 %Once the consumer receives the certificate, he or she presents it to the content
@@ -1427,10 +1928,10 @@ reasons their authentication system, Persona, failed.
 %a valid (``zombie'') certificate of membership (see the previous section).
 %
 %To reduce the impact of ``zombie'' certificates, we introduce a freshness
-%constraint. Publishers record the last time they removed a member from an
+%constraint. Producers record the last time they removed a member from an
 %organization and, when generating an ACL for a piece of content, they tell the
 %content host to not accept any certificates of membership issued before this
-%time. This way consumers removed from an organization before the publisher
+%time. This way consumers removed from an organization before the producer
 %gives that organization access to a piece of content will not be able to use
 %their ``zombie'' certificates to access that piece of content.
 %
@@ -1474,7 +1975,7 @@ reasons their authentication system, Persona, failed.
 %
 %\subsubsection{HTTP}
 %
-%For now, we do not plan to allow publishers to attach ACLs to content using the
+%For now, we do not plan to allow producers to attach ACLs to content using the
 %HTTP protocol. We expect they will do so by, e.g.\ writing custom
 %\texttt{.htaccess} files. However, consumers will be able to authenticate over
 %HTTP\@.
@@ -1500,23 +2001,23 @@ reasons their authentication system, Persona, failed.
 %// access a piece of content.
 %function DRACLAuthenticate(challenge, callback);
 %
-%// Ask a publisher to create a ACL for the described content.
+%// Ask a producer to create a ACL for the described content.
 %// The `contentDescription` argument is a short plain-text
 %// description of the content.
 %function DRACLCreateACL(contentDescription, callback);
 %
-%// Ask a publisher to update an ACL\@. The `aclDescription`
+%// Ask a producer to update an ACL\@. The `aclDescription`
 %// argument is the description from the ACL itself.
 %function DRACLUpdateACL(contentDescription, aclDescription, callback);
 %\end{minted}
 %
-%\subsection{Browser $\leftrightarrow$ Access Control Provider API}
+%\subsection{Browser $\leftrightarrow$ Authentication Provider API}
 %
 %This document will not discuss the specifics of the API for communication
-%between consumers, publishers, and APs. While important, the design of this API
+%between consumers, producers, and APs. While important, the design of this API
 %will be driven by implementation needs and is not an API that can be reasonably
 %designed in advance. Additionally, this API will only impact browser authors and
-%Access Control Providers so, while important, it doesn't have to be elegant.
+%Authentication Providers so, while important, it doesn't have to be elegant.
 %
 %\subsection{Web Server Plugin APIs}
 %
@@ -1540,24 +2041,24 @@ reasons their authentication system, Persona, failed.
 %
 %\subsection{Availability}
 %
-%This system never requires that the publisher/consumer be online at the same
+%This system never requires that the producer/consumer be online at the same
 %time. Both the consumer and producer will be able to use the system from behind
 %firewalls.
 %
-%This system does require that the Access Control Provider be available most of
+%This system does require that the Authentication Provider be available most of
 %the time but can tolerate small windows of down-time. % TODO: Explain?
 %
 %\subsection{Performance}
 %
-%\subsubsection{Access Control Provider}
+%\subsubsection{Authentication Provider}
 %
-%The communication overhead for the Access Control Provider are no worse than
+%The communication overhead for the Authentication Provider are no worse than
 %Kerberos. Consumers will re-use their secret keys so they will only have to
-%communicate with Access Control Providers to retrieve organization membership
+%communicate with Authentication Providers to retrieve organization membership
 %certificates. As this organization certificate system is modeled after Kerberos,
 %its performance characteristics should be similar.
 %
-%Producers only need to contact their Access Control Providers when modifying their
+%Producers only need to contact their Authentication Providers when modifying their
 %friend-list so the \emph{overhead} should be zero. That is, managing a
 %friend-list always requires communication and DRACL doesn't add any additional
 %communication requirements.
@@ -1566,17 +2067,17 @@ reasons their authentication system, Persona, failed.
 %
 %\begin{compactitem}
 %\item 1 Elliptic Curve Key Key Pair ($\unit[256]{bits}$)
-%\item 1 Publisher Secret ($\unit[256]{bits}$)
+%\item 1 Producer Secret ($\unit[256]{bits}$)
 %\item Two shared secrets per friend (assuming bi-directional friendship)
 %    ($\unit[128]{bits}$ each, estimated 300 friends per user = $\unit[9.36]{KiB}$)
 %    % TODO: shared secret too small?
 %\item Organization IDs ($\unit[64]{bits}$ each, estimated 10 per user = $\unit[70]{KiB}$).
 %\end{compactitem}
 %
-%Conservatively, no Access Control Provider should have to store more than
+%Conservatively, no Authentication Provider should have to store more than
 %$\unit[100]{KiB}$ (including miscellaneous metadata) per user.
 %
-%The cryptographic overhead is minimal. The Access Control Provider must verify
+%The cryptographic overhead is minimal. The Authentication Provider must verify
 %an ECDSA signature to authenticate consumers once per ``session'' but can cache
 %a user's identity using a cookie (TBD). The AP must also compute one symmetric
 %signature per organization membership certificate issued but this overhead will
@@ -1659,7 +2160,7 @@ reasons their authentication system, Persona, failed.
 %
 %  - Consumers
 %
-%  - Publishers
+%  - Producers
 %
 %* Remove users from groups.
 %

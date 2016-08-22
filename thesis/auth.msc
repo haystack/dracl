@@ -1,5 +1,24 @@
 msc {
-    c [label="Consumer"],h [label="Content Host"];
+    p [label="Producer"],a [label="Authentication Provider"],c [label="Consumer"],h [label="Content Host"];
+
+    ...;
+
+    |||;
+
+    p => a [textcolor=teal,linecolor=teal,label="Upload keys for consumer ([Secret Key])"];
+
+    ...;
+
+    c => h [label="Request Protected Content"];
+    c << h [label="Authentication Required [ACL]"];
+
+    |||;
+
+    a abox c [textcolor=teal,linecolor=teal,label="Fetch [Secret Key] if not cached."];
+
+    |||;
+
+    c box c [label="Pre-Verify against [ACL]"];
 
     c box c [label="Generate [Setup Material] from [Secret Key]"];
     c => h [label="[Setup Material]"];

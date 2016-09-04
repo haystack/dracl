@@ -65,6 +65,15 @@
 \DeclareMathOperator{\pair}{\mathtt{Pair}}
 \DeclareMathOperator{\hmac}{\mathtt{HMAC}}
 
+\DeclareMathOperator{\Vvec}{\mathbf{Verifier}}
+\DeclareMathOperator{\PvecP}{\mathbf{ProverPublic}}
+\DeclareMathOperator{\PvecS}{\mathbf{ProverPrivate}}
+\DeclareMathOperator{\Cvec}{\mathbf{Challenge}}
+\DeclareMathOperator{\Proof}{\mathbf{Proof}}
+
+\DeclareMathOperator{\rand}{\mathbf{Rand}}
+
+
 \begin{document}
 
 \newgeometry{left=1in,right=1in,top=1in,bottom=1in}
@@ -649,7 +658,6 @@ provide infinite storage or bandwidth. Additionally, the better an access
 control system scales, the less money it takes to run it and the more likely it
 is for a benevolent third party to be able to do so free of charge.
 
-
 \subsection{Summary}
 
 We've covered a lot in this section however, all this discussion really boils
@@ -1207,8 +1215,8 @@ parentheses and covered later.
 
 \begin{figure}
     \includegraphics{auth.eps}
-    \label{fig:auth}
     \caption{Authentication Protocol}
+    \label{fig:auth}
 \end{figure}
 
 Before running this protocol but after receiving the ACL, the consumer learns
@@ -1366,14 +1374,14 @@ Below, we summarize what information DRACL reveals to the various parties involv
   access to any given resource. See section \cref{sec:resonable_privacy} for
   some caveats and exceptions (specifically, they learn how many groups grant
   them access).
-\item[Authentication Providers] authentication providers learn their users'
+\item[Authentication Providers] Authentication Providers learn their users'
   social networks but can't act on behalf of their users or access their
   content.
-\item[Producer] An honest but curious producer cannot learn if and when specific
-  friends access their content. Given sufficient collusion and effort, producers
-  can learn something about who accesses what when but this is unlikely to be an
-  issue in practice. See section the on consumer privacy
-  (\cref{sec:consumer_privacy}) for details.
+\item[Producer] An honest but curious producer does not learn if and when
+  specific friends access their content. Given sufficient collusion and effort,
+  producers can learn something about who accesses what when. However, in
+  practice, we don't believe that this will be much of an issue See section the
+  on consumer privacy (\cref{sec:consumer_privacy}) for a detailed discussion.
 \end{description}
 
 The following sections detail what privacy guarantees we provide and what
@@ -1383,8 +1391,8 @@ information we leak.
 \label{sec:producer_privacy}
 
 In general, DRACL provably reveals (almost, read on) nothing about the producers
-social network to any third party other than the producer's AP (see
-\cref{chap:crypto} for details).
+social network to any third party other than the producer's AP. The following
+sections detail the exceptions.
 
 \subsubsection{Reasonable Privacy}
 \label{sec:resonable_privacy}
@@ -1437,10 +1445,10 @@ four options:
 \item Don't reveal the producer at all.
 \end{compactenum}
 
-It is provably impossible to implement option 4 without sacrificing
-performance. Basically, because we don't update ACLs whenever a group definition
-changes some party must use some producer-specific information at some point in
-the authentication protocol. Because the AP can't participate directly in every
+It is provably impossible to implement option 4 without sacrificing performance.
+Basically, because we don't update ACLs whenever a group definition changes some
+party must use some producer-specific information at some point in the
+authentication protocol. Because the AP can't participate directly in every
 access check, this party must be either the content host or the consumer. We've
 included a complete proof in \cref{proof:public-producer-4}
 
@@ -1461,30 +1469,45 @@ complicate the content hosts (they would have to listen for updates from an
 external service) and force the producers to contact every content host they
 have ever used whenever they change the members of one of their groups.
 
-If we were to implement option 2, DRACL would either lose unidirectional
-friendships or scale horribly at the tail. Basically, consumers could remember a
-small list of producers with which they are actually friends. For each producer,
-they could store a producer-specific secret that allows them to recognize an ACL
-as having been authored by this producer. However, that would make it harder to
-make new friends. In DRACL as designed, if a producer knows about a consumer,
-they can grant that consumer access to content. If consumers had to pick a short
-list of ``friends'' that could grant them access to content, we'd lose this
-property.
+If we were to implement option 2, DRACL would lose unidirectional friendships,
+scale horribly at the tail, or make it easier for a content host to deanonymize
+consumers.
 
-On the other hand, consumers could keep track of every producer who has ever
-shared a piece of content with them. Unfortunately, this would require them to
-possibly keep track of many producers and require an infrastructure for
-notifying consumers when a producer has shared some content with them.
-Additionally, for popular users, this list could grow very large. Worse, the
-size of this list scales based on actions taken by \emph{other} producers, not
-the consumer in question. Finally, to actually authenticate against an ACL,
-consumers would have to linearly search through the set of producer-specific
-secrets to find the producer that authored the ACL\@. We sketch a proof for this
-statement (making a reasonable assumption that we don't bother proving) in
+Case 1: Consumers could remember a small list of producers with which they are
+actually friends. For each producer, they could store a producer-identifying
+secret that allows them to recognize an ACL as having been authored by this
+producer. However, that would make it harder to make new friends. In DRACL as
+designed, if a producer knows about a consumer, they can grant that consumer
+access to content. If consumers had to pick a short list of ``friends'' that
+could grant them access to content, we'd lose this property.
+
+Case 2: Consumers could keep track of every producer who has ever shared a piece
+of content with them. Unfortunately, this would require them to possibly keep
+track of many producers and require an infrastructure for notifying consumers
+when some producer has shared some content with them. Additionally, for popular
+users, this list could grow very large. Worse, the size of this list scales
+based on actions taken by \emph{other} producers, not the consumer in question.
+Finally, to actually authenticate against an ACL, consumers would have to
+linearly search through the set of producer-identifying secrets to find the
+producer that authored the ACL\@. We sketch a proof for this statement (making a
+reasonable assumption that we don't bother proving) in
 \cref{proof:public-producer-2}.
 
+Case 3: Consumers could ask the AP (listed in the ACL) for the
+producer-identifying secret when they encounter an ACL with an unknown producer.
+They could also store a small set of these (the one's associated with close
+friends). However, if the AP just gave these keys out to anyone who asked, we'd
+gain no privacy. Therefore, the consumer has to identify to the AP to allow the
+AP to determine if the consumer is a friend of the producer in question).
+Unfortunately, at this point, the producer has little reason to trust the AP
+with their identity as they don't know what producer created the ACL. As a
+matter of fact, the content host could have created the ACL in an attempt to get
+the consumer to identify to an AP run by the content host. Details of this
+specific attack are discussed in \cref{sec:doxing_consumers}.
+
 In short, we make the producer public because it allows us to achieve better
-usability and performance.
+usability and performance and allows the consumer to make an informed decision
+when identifying themself to a third party.
 
 \subsubsection{The AP Learns The Social Network}
 \label{sec:ap_learns_network}
@@ -1520,24 +1543,29 @@ twice a day. On the scale of Facebook, that's 8PiB (that's \emph{Petabytes}) per
 day.
 
 However, this could be solved without adding a new party with some fancy crypto
-and an anonymizing network. Basically (massive simplification), the producer
-would get the AP to sign some keys where the consumer has been cryptographically
-hidden (blinded) but the producer is visible (to the AP). Then, the producer
-would unhide the part mentioning the consumer and hide the part mentioning the
-producer and re-upload the altered key to the AP over an anonymous connection.
-The consumer could now safely authenticate when downloading the keys because
-they wouldn't be tied to the producer in any way (that part has been
-cryptographically blinded). The consumer would then have to unhide the part that
-mentions the producer to be able to successfully authenticate to content hosts.
+and an anonymizing network like Tor. Basically (enormous simplification), the
+producer would have their AP sign the consumer's ACL Keys with the consumer's
+identity cryptographically hidden and then re-upload them to the AP anonymously
+with the their (the producer's) identity cryptographically hidden.\footnote{In
+  slightly more detail, the producer would get the AP to sign a consumer's ACL
+  Keys where any information identifying the consumer has been cryptographically
+  hidden (blinded) but the parts identifying the producer are visible (to the
+  AP). Then, the producer would unblind the parts mentioning the consumer and
+  blind the parts mentioning the producer and re-upload the altered key to the AP
+  over an anonymized connection (e.g., over Tor). The consumer could now safely
+  authenticate when downloading the keys because they wouldn't be tied to the
+  producer in any way (that part has been cryptographically hidden). The
+  consumer would then have to unblind the part that mentions the producer to be
+  able to successfully authenticate to content hosts.}
 
-Unfortunately, even the simplified this scheme above is complicated. It would
-require a some fancy crypto (something like a partially blind partially
-homomorphic signature algorithm), would require multiple rounds of communication
-between the producer and their AP (some of them over anonymizing networks), and
-would still be vulnerable to timing correlation attacks. By timing correlation
-attack, we mean that, given that producer $A$ uploaded a key for signing at time
-$T$ and an anonymous producer uploaded a key for consumer $B$ at time
-$T+\epsilon$, $A$ is probably a friend of $B$.
+Unfortunately, even this simplified scheme is complicated. It would require a
+some fancy crypto (something like a partially blind partially homomorphic
+signature algorithm), would require multiple rounds of communication between the
+producer and their AP (some of them over anonymizing networks), and would still
+be vulnerable to timing correlation attacks. By timing correlation attack, we
+mean that, given that producer $A$ uploaded a key for signing at time $T$ and an
+anonymous producer uploaded a key for consumer $B$ at time $T+\epsilon$, $A$ is
+probably a friend of $B$.
 
 Basically, a perfect system to hide the producer's social networks from APs but
 such a system would be significantly more complicated.
@@ -1561,11 +1589,13 @@ that, at this point, the chicken has flown the coop so to speak.
 
 DRACL allows consumers to anonymously access content. Specifically, DRACL
 attempts to prevent content hosts and untrusted third parties from tracking
-consumer behavior and browsing habits. However, there are ways in which
-malicious parties can try to use DRACL to identify and/or track consumers in
-some cases. Below we first discuss passive attacks that can let a content host
-learn something about the identity of a consumer and then finish with an active
-attack and some mitigations.
+consumer behavior and browsing habits. Furthermore, it avoids notifying the
+producer directly when a consumer ``sees'' a piece of content.
+
+However, there are ways in which malicious parties can try to use DRACL to
+identify and/or track consumers in some cases. Below we first discuss passive
+attacks that can let a content host learn something about the identity of a
+consumer and then finish with an active attack and some mitigations.
 
 \subsubsection{Fingerprinting}
 \label{sec:fingerprinting}
@@ -1651,7 +1681,7 @@ logging into shady websites with something like Facebook Connect.
 \label{sec:user_friendly}
 
 We have designed DRACL (at the system level) to be user friendly and
-unobtrusive. We meet our goals but there's still room for improvement.
+unobtrusive. We meet our requirements but there's still room for improvement.
 
 \subsection{What We Got Right}
 
@@ -1684,9 +1714,9 @@ reasons their authentication system, Persona, failed.
 \subsection{Where We Could Improve}
 \label{sec:usability_improve}
 
-However, DRACL has some significant usability drawbacks: it's slow, revocation
-isn't instantaneous, and the maximum number of consumers to which a producer can
-grant access to content is limited (as it is on Facebook).
+DRACL has some significant usability drawbacks: it's slow, revocation isn't
+instantaneous, and the maximum number of consumers to which a producer can grant
+access to content is limited (as it is on Facebook).
 
 The client-side DRACL operations are \emph{very slow}. They take about 1-2
 seconds on my 6 year old laptop so they should take at most a second on a recent
@@ -1737,17 +1767,19 @@ security and performance requirements do impose a significant usability cost.
 
 \section{User Freedom}
 
-DRACL promotes user freedom through being decentralized, by allowing consumers to
+DRACL promotes user freedom by being decentralized, by allowing consumers to
 freely move between content hosts, and by enabling developers to easily create
 new services.
 
 Simply by being decentralized, DRACL promotes user freedom by allowing producers
-to choose their authentication provider.
+to choose their authentication provider. This ensures that no authentication can
+become a monopoly.
 
 By allowing producers to manage their social network through a single
 authentication provider, DRACL allows users to carry their social network with
 them from content host to content host. This reduces the barrier to moving
-between content hosts and therefore promotes user freedom.
+between content hosts and therefore promotes user freedom in their choice of
+content host.
 
 Finally, by allowing producers to share content with consumers on any content
 host even if the consumer doesn't have an account at that content host, we've
@@ -1943,82 +1975,148 @@ Here, we list them off for easy picking.
 \end{itemize}
 
 \chapter{Authentication Protocol}
+\label{chap:auth}
 
-This chapter covers the authentication protocol itself assuming a few
-cryptographic primitives which we describe in \cref{chap:crypto}.
+\newcommand{\Vv}{\Vvec(\vec{a})}
+\newcommand{\Cv}{\Cvec(s_1, \vec{a})}
+\newcommand{\Pv}{\PvecP(\vec{b})}
+\newcommand{\Sv}{\PvecS(\vec{b})}
+
+This chapter covers the authentication protocol in detail from a systems
+perspective.
 
 \section{Primitives}
 
 Before we can cover the authentication protocol, we need to know what tools we
-can use.
+have in our arsenal.
 
 \subsection{Standard Tools}
 
-In the authentication protocol, we use standard tools like HMAC, hashing,
-symmetric encryption, and asymmetric encryption. When we say encryption, we mean
-authenticated encryption.
+In DRACL, we use standard tools like HMAC, hashing, symmetric encryption, and
+asymmetric encryption. If you are unfamiliar with any of these terms, please go
+to Wikipedia and familiarize yourself with them now. Otherwise, you will be very
+confused.
 
-\subsection{Rerandomizable Signature Protocol}
+Cryptographers: This chapter is targeted at non-cryptographers. Please make
+reasonable assumptions where appropriate. When we say encryption, we mean
+authenticated randomized encryption. When we say hashing, we're talking about
+cryptographically secure hashing with preimage resistance.
 
-TODO: Explain what this is.
+\subsection{Inner-Product Encryption}
 
-\subsection{Encrypted Inner-Product Proof}
+DRACL uses an extension of inner product encryption (see \cref{chap:crypto}) to
+allow a consumer to prove to a content host that they are in a group listed in
+an ACL.
 
-TODO: Explain this primitive.
+An admin (in our case the producer) can generate special encrypted verifier
+bit-vectors ($\Vv$) and encrypted prover bit-vector key-pairs ($\Pv$, $\Sv$).
+Someone with one of these verifier bit-vectors can generate encrypted challenge
+bit-vectors ($\Cv$ where $s$ is a secret). Someone else with a prover bit-vector
+can prove that their prover bit-vector has a non-zero inner product with a given
+challenge bit-vector. We use this to allow consumers --- with prover bit-vectors
+that describe the groups that they are in --- to prove to content hosts --- with
+challenge bit-vectors that describe the groups that are in the ACL --- that the
+consumer is in some group listed in the ACL.
+
+Crucially, all these bit-vectors are encrypted and hidden from all parties
+except the admin (producer).
+
+\subsection{Unlinkable Public Keys}
+
+TODO
 
 \section{Setup}
 
-TODO: use the primitives above here to make this clearer.
+\subsection{ACL}
 
-The ACL includes an encrypted bit-vector ($C$) that describes the groups
-that should be granted access to the content and the consumer's ACL Private Key
-($K$) includes another encrypted a bit-vector that encodes the groups in which
-the consumer is a member. The consumer also has an ACL Public Key ($P$) along
-with a certificate signed by the producer indicating the time period for which
-$P$ is valid.
+In DRACL, every ACL includes a $\Vv$ where $\vec{a}$ is a bit-vector that
+describes the groups that should be granted access. Additionally, every ACL
+lists the producer's public identity key and the producer's AP. Finally, every
+ACL is signed by the producer's identity key to allow the consumer to verify
+that it hasn't been tampered with.
+
+\subsection{ACL Key}
+
+Every consumer's ACL Private Key includes a $\Pv$ and their ACL Public Key
+includes a $\Sv$ where $\vec{b}$ encodes the groups in which the consumer is a
+member. Additionally, the consumer has a certificate on $\Sv$ that certifies the
+time period for which it is valid. This certificate is signed by both the
+producer and the producer's AP.
 
 \section{Protocol}
 
-TODO: use the primitives above here to make this clearer.
+Abstractly, the protocol is simple: the content host chooses a secret scalar
+$s$, gives the consumer some encrypted form of $s$, and then gets back some form
+of $s$ that the consumer wouldn't have been able to compute if the inner product
+of $\vec{a}$ and $\vec{b}$ were zero. We've duplicated the protocol diagram from
+\cref{sec:authentication} (\cref{fig:auth2}) and refer to it liberally.
 
-\begin{enumerate}
-  \item The content host sends the ACL to the consumer along with a signature on
-    the ACL signed by the producer.
-  \item The consumer first verifies the signature on the ACL and decides whether
-    or not to even attempt to authenticate against the ACL.
-  \item They then pre-verify that they should be able to authenticate against
-    the ACL by running the authentication protocol locally (pretending to be the
-    content host).
-  \item If they choose to continue, they then re-randomize their ACL Public Key
-    (call it $P^r$) and sends it to the content host. This re-randomization
-    ensures that the ACL Public Key does not uniquely identify the consumer.
-    Note: We use a special signature scheme that allows the consumer to
-    re-randomize their ACL public key while preserving the producer's signature
-    on it.
-  \item The content host verifies the signature on $P^r$ and verifies that it is
-    currently valid (the key hasn't expired).
-  \item The content host then ``mixes'' some secret $s$ into $C$ (we'll call
-    this $C^s$), and uses the consumer's (randomized) ACL Public Key ($P^r$) and
-    the ACL to compute some secret $Q^{rs} = f(C, s, P^r)$. $Q^{rs}$ has the
-    crucial property that only someone who knows $P^r$ and either $s$ and $C$ or
-    $C^s$ and a $K$ that (1) corresponds to $P^r$ and (2) intersects with $C$
-    could determine.
-  \item The content host computes $T = \hash(Q^{rs})$, and symmetrically
-    encrypts $s$ using $T$ as the secret key to produce $E$.
-  \item The content host then sends $E$ to the consumer along with $C^s$.
-  \item The consumer computes $Q^{rs}$ from $C^s$, $P^r$, and $K$. They then
-    hash it to recover $T$, and then decrypt $E$ to recover $s$.
-  \item Now, the consumer re-creates $C^s$ from $C$ to verify that the content
-    host followed the protocol correctly. This ensures that the content host
-    can't fish for additional information by giving the consumer a malformed
-    challenge (or one that doesn't correspond to the ACL presented in step 1).
-  \item Finally, the consumer sends $\hmac(s, \text{``proof of membership for
-      \texttt{domain\_of\_content\_host}''})$ back to the content host (where
-    $\hmac$ is a keyed-hash message authentication code.
-  \item The content host verifies the HMAC, verifies that the consumer knows
-    what content host they are talking to to prevent man in the middle attacks,
-    and finally grants them access to the content.
-\end{enumerate}
+\begin{figure}
+    \includegraphics{auth.eps}
+    \caption{Authentication Protocol}
+    \label{fig:auth2}
+\end{figure}
+
+\subsection{Attempt Access}
+
+When a consumer attempts to access a protected piece of content (1), the content
+host returns the signed ACL to the consumer which includes $\Vv$ (2).
+
+\subsection{Pre-Verify}
+
+The consumer first verifies the signature on the ACL and decides whether or not
+to even attempt to authenticate against the ACL (e.g., they may not be friends
+with the producer).
+
+They (the consumer) then pre-verifies (3) that they should be able to
+authenticate against the ACL by running the cryptographic part of
+authentication protocol locally (pretending to be the content host).
+
+\subsection{Generate Setup Material}
+
+If they choose to continue, they then re-randomize (4) their ACL Public Key
+\allowbreak($\rand(\Pv)$) and send it to the content host along with the certificate (5).
+This re-randomization ensures that the ACL Public Key does not uniquely identify
+the consumer.
+
+The content host verifies the certificate on $\rand(\Pv)$ and verifies
+that it is currently valid: the key hasn't expired and has been signed by
+both the producer and the producer's AP.
+
+\subsection{Challenge Generation}
+
+The content host then generates two secrets ($s_1$ and $s_2$) and creates a
+challenge $\Cv$ from $s_1$ and $\Vv$ (6). They also use the consumer's
+randomized ACL Public Key ($\rand(\Pv)$), $s$, and $\Vv$ to generate $P =
+\Proof(\Cv, \allowbreak\rand(\Pv))$. This is the proof that the consumer must
+generate. The content host can generate this without knowing an appropriate
+$\Sv$ because they know $s_1$.
+
+The content host then computes $T = \hash(P)$, and symmetrically encrypts the
+$(s_1, s_2)$ pair using $T$ as the secret key to produce $E$ (6).
+
+The content host then sends $\Cv$ and $E$ to the consumer (7).
+
+\subsection{Proving Access}
+
+The consumer computes $P = \Proof(\Cv, \rand(\Pv))$ from $\Cv$, $\rand(\Pv)$,
+and $\Sv$. They then hash it to recover $T$, and then decrypt $E$ to recover
+$(s_1, s_2)$.
+
+Now, the consumer re-creates $\Cv$ from $\Vv$ using $s_1$ to verify that the
+content host followed the protocol correctly. This ensures that the content host
+can't fish for additional information by giving the consumer a malformed
+challenge (or one that doesn't correspond to the ACL presented in step 1).
+
+The consumer then symmetrically signs (HMACs) a statement ``proof of membership
+for \texttt{domain\_of\_content\_host}'' with $s_2$ (8) and sends this back to
+the content host as proof that they should be granted access to the content.
+
+\subsection{Verification}
+
+Finally, the content host verifies the HMAC using $s_2$ (10), verifies that the
+consumer knows what content host they are talking to to prevent man in the
+middle attacks, and finally grants them access to the content (11).
 
 
 \chapter{Crypto}
@@ -2092,18 +2190,19 @@ $\eins_1(\Ap)$ and $\eins_2(\Bp)$ to produce $\eouts(\ABp)$.
 
 $\eins$, $\ein$, and $\eouts$ all have the following properties: 
 \begin{enumerate}
-\item The first argument is homomorphic over linear combinations. That is, there
-  is a function $\combine$ that can produce $f(x\cdot \Ap + y\cdot Bp, \ldots) =
-  \combine(x, y, f(\Ap, \ldots), f(\Bp, \ldots))$ assuming the remaining
-  arguments are identical (where $f$ is one of the above functions).
+\item The first argument is homomorphic over linear combinations. That is, given
+  one of the above functions $f$, there is a function $\combine$ that can
+  produce $f(x\cdot \Ap + y\cdot Bp, \ldots) = \combine(x, y, f(\Ap,
+  \ldots),f(\Bp, \ldots))$ assuming the remaining arguments
+  ($\ldots$) are identical.
 \item The vectors passed into $\ein$ are ``hidden''. That is, given
   $\ein_1(\ldots, \vec{a})$ and $\ein_2(\ldots, \vec{b})$, it's possible to
   learn the inner product of these two vectors but nothing more. This was proven
   in \cite{inner-product} and \cite{inner-product-ext}.
-\item Given $\ein_1(s \cdot \Ap, \vec{a})$, $\ein_2(\Bp, \vec{b})$,
-  $\eins_1(\Ap)$, and $\eins_2(\Bp)$, it's hard to compute $\eouts(s\cdot\ABp)$
-  unless $\iprod{\vec{a}}{\vec{b}}$ is non-zero. We prove this in
-  \cref{sec:crypto-sec}.
+\item Given $\ein_1(s \cdot \Ap, \vec{a})$, \allowbreak$\ein_2(\Bp, \vec{b})$,
+  \allowbreak$\eins_1(\Ap)$, and \allowbreak$\eins_2(\Bp)$, it's hard to compute
+  $\eouts(s\cdot\ABp)$ unless $\iprod{\vec{a}}{\vec{b}}$ is non-zero. We prove
+  this in \cref{sec:crypto-sec}.
 \end{enumerate}
 
 Now that we've abstracted away some of the underlying crypto, we can talk about
@@ -2116,9 +2215,10 @@ to build our authentication protocol.
 
 \subsection{Basic Authentication Protocol}
 
-Abstractly, the protocol is simple: the content host chooses a secret scalar
-$s$, gives the consumer some encrypted form of $s$, and then gets back some form
-of $s$ that the consumer wouldn't have been able to compute if
+Again, as noted in the authentication protocol chapter (\cref{chap:auth}) the
+protocol is abstractly simple. The content host chooses a secret scalar $s$,
+gives the consumer some encrypted form of $s$, and then gets back some form of
+$s$ that the consumer wouldn't have been able to compute if
 $\iprod{\vec{a}}{\vec{b}}$ were zero.
 
 Below, we give a first attempt at the protocol and then fix some problems with
@@ -2127,11 +2227,15 @@ it in the following sections.
 \subsubsection{Setup}
 
 The producer includes $C_1 = \ein_1(\Ap, \vec{a})$ --- an encryption of
-$\vec{a}$ --- and $C_2 = \eins_1(\Ap)$ in every ACL. In the consumer's ACL Key,
-the producer includes $K_1 = \ein_2(\Bp, \vec{b})$ --- an encryption of
-$\vec{b}$ --- as the ACL Private Key and $K_2 = \eins_2(\Bp)$ and a certificate
-on $K_2$ --- certifying it as a valid ACL Public Key for some period of time --- as
-the ACL Public Key.
+$\vec{a}$ --- and $C_2 = \eins_1(\Ap)$ in every ACL. In \cref{chap:auth}, this
+was $\Vv$.
+
+In the consumer's ACL Key, the producer includes $K_1 = \ein_2(\Bp, \vec{b})$
+--- an encryption of $\vec{b}$ --- as the ACL Private Key and $K_2 =
+\eins_2(\Bp)$ and a certificate on $K_2$ --- certifying it as a valid ACL Public
+Key for some period of time --- as the ACL Public Key. In \cref{chap:auth},
+$K_1$ was $\Sv$ and $K_2$ was part of $\Pv$ (the real $\Pv$ as a few more pieces
+that we'll discuss later).
 
 \subsubsection{Protocol}
 
@@ -2149,12 +2253,13 @@ then computes:
 If $\eouts(c \cdot \ABp)$ is $1$, authentication has failed and the consumer
 aborts (this is the pre-verification step). Otherwise, they can brute-force $c$
 because it must be small (it's the size of the intersection) by repeatedly using
-$\combine$ on $\eouts(\ABp)$ ($\combine(\stackrel{\text{\tiny ?}}{c}, 0, \eouts(\ABp),
+$\combine$ on $\eouts(\ABp)$ (that is, $\combine(\stackrel{\text{\tiny ?}}{c}, 0, \eouts(\ABp),
 \eouts(\ABp))$).
 
 Next, the consumer sends their ACL Public Key to the content host ($K_2$ and the
-certificate on $K_2$) to the content host. The content host verifies the
-certificate and verifies that $K_2$ is currently valid.
+certificate on $K_2$) to the content host (not randomized but we'll get to that
+in \cref{sec:anon-crypto}). The content host verifies the certificate and
+verifies that $K_2$ is currently valid.
 
 The content host then computes $C^s = \ein_1(s\cdot\Ap, \vec{a})$ and $R =
 \pair(\eins(s\cdot \Ap),\,\eins_2(\Bp)) = \eouts(s\cdot \ABp)$. They send $C^s$
@@ -2175,6 +2280,7 @@ Unfortunately, $\Bp$ and, in-turn, $K_2$ uniquely identify the consumer which
 violates our anonymity requirement.
 
 \subsection{Anonymity}
+\label{sec:anon-crypto}
 
 To hide the consumer's identity, we randomize the consumer's ACL Public Key in
 such a way that still allows the consumer to take the inner product between

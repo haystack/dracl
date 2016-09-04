@@ -5,26 +5,38 @@ msc {
 
     |||;
 
-    p => a [textcolor=teal,linecolor=teal,label="Upload keys for consumer ([Secret Key])"];
+    p => a [label="(( Upload keys for consumer ([Secret Key]) ))"];
 
     ...;
 
+    --- [label="(1)            ",linecolor=white],
     c => h [label="Request Protected Content"];
+    --- [label="(2)            ",linecolor=white],
     c << h [label="Authentication Required [ACL]"];
 
     |||;
 
-    a abox c [textcolor=teal,linecolor=teal,label="Fetch [Secret Key] if not cached."];
+    a abox c [label="(( Fetch [Secret Key] if not cached ))"];
 
     |||;
 
+    --- [label="(3)            ",linecolor=white],
     c box c [label="Pre-Verify against [ACL]"];
 
+    --- [label="(4)            ",linecolor=white],
     c box c [label="Generate [Setup Material] from [Secret Key]"];
+    --- [label="(5)            ",linecolor=white],
     c => h [label="[Setup Material]"];
+    --- [label="(6)            ",linecolor=white],
     h box h [label="Generate [Challenge] from [ACL] and [Setup Material]"];
+    --- [label="(7)            ",linecolor=white],
     c << h [label="[Challenge]"];
+    --- [label="(8)            ",linecolor=white],
     c box c [label="Generate [Proof] from [Challenge] and [Secret Key]"];
+    --- [label="(9)            ",linecolor=white],
     c => h [label="[Proof]"];
+    --- [label="(10)             ",linecolor=white],
+    h box h [label="Verify [Proof]"];
+    --- [label="(11)             ",linecolor=white],
     c << h [label="[Content]"];
 }

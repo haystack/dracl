@@ -8,7 +8,7 @@
 \usepackage{url}
 \usepackage{amsmath}
 \usepackage{amsfonts}
-\usepackage{setspace}
+\usepackage[nodisplayskipstretch]{setspace}
 \usepackage{paralist}
 \usepackage{enumitem}
 \usepackage[]{units}
@@ -65,16 +65,31 @@
 \DeclareMathOperator{\pair}{\mathtt{Pair}}
 \DeclareMathOperator{\hmac}{\mathtt{HMAC}}
 
-\DeclareMathOperator{\Vvec}{\mathbf{Verifier}}
-\DeclareMathOperator{\PvecP}{\mathbf{ProverPublic}}
-\DeclareMathOperator{\PvecS}{\mathbf{ProverPrivate}}
-\DeclareMathOperator{\Cvec}{\mathbf{Challenge}}
-\DeclareMathOperator{\Proof}{\mathbf{Proof}}
+\DeclareMathOperator{\vh}{\mathtt{VerifyHSig}}
+\DeclareMathOperator{\Hsig}{\mathtt{HSig}}
+\DeclareMathOperator{\mHsig}{\mathtt{HSign}}
+\DeclareMathOperator{\Vvec}{\mathtt{Verifier}}
+\DeclareMathOperator{\PvecP}{\mathtt{ProverPublic}}
+\DeclareMathOperator{\PvecS}{\mathtt{ProverPrivate}}
+\DeclareMathOperator{\PvecG}{\mathtt{ProverGenerator}}
+\DeclareMathOperator{\Cvec}{\mathtt{Challenge}}
+\DeclareMathOperator{\mCvec}{\mathtt{MakeChallenge}}
+\DeclareMathOperator{\Proof}{\mathtt{Proof}}
+\DeclareMathOperator{\mProof}{\mathtt{MakeProof}}
+\DeclareMathOperator{\pProof}{\mathtt{PredictProof}}
+\DeclareMathOperator{\Hp}{\mathtt{HSigPublic}}
+\DeclareMathOperator{\Hs}{\mathtt{HSigPrivate}}
+\DeclareMathOperator{\HsigG}{\mathtt{HSigGenerator}}
 
-\DeclareMathOperator{\rand}{\mathbf{Rand}}
+\DeclareMathOperator{\rand}{\mathtt{Randomize}}
 
 
 \begin{document}
+
+\makeatletter
+\def\footnoterule{\kern 12\p@
+  \hrule \@width 2in \kern 7.6\p@} % the \hrule is .4pt high
+\makeatother
 
 \newgeometry{left=1in,right=1in,top=1in,bottom=1in}
 
@@ -1205,13 +1220,13 @@ to know to understand DRACL:
 
 When a consumer attempts to access protected content, the content host first
 sends the content's ACL to the consumer. The consumer then fetches any their ACL
-keys from the producer's AP if not already cached and pre-verifies that they
+Keys from the producer's AP if not already cached and pre-verifies that they
 will be able to successfully authenticate against the ACL. If pre-verification
-succeeds, the consumer and content host run the authentication protocol to
-determine if the consumer should be able to access the protected content. This
-is diagrammed in figure \cref{fig:auth}. The parts of this diagram that aren't
-strictly speaking part of the authentication protocol are marked with double
-parentheses and covered later.
+succeeds, the consumer and content host run the authentication protocol to prove
+to the content host that the consumer should be able to access the protected
+content. This is diagrammed in figure \cref{fig:auth}. The parts of this diagram
+that aren't strictly speaking part of the authentication protocol are marked
+with double parentheses and covered later.
 
 \begin{figure}
     \includegraphics{auth.eps}
@@ -1311,15 +1326,9 @@ that their keys have been compromised, the AP will stop producing this
 certificate effectively locking out all access to the producer's content.
 
 To prevent an attacker with a compromised but revoked consumer identity key from
-accessing content from other producers, we use a two-key system when
-authenticating against ACLs. Basically, every ACL Key is actually two keys: one
-issued by the producer that never expires and one issued by the producer's AP
-that expires quickly. When the consumer goes to the producer's AP to ask for
-their keys, they fetch both keys. When the consumer authenticates against an
-ACL, they use both keys. This allows the producer's AP to revoke access to any
-given consumer by simply not issuing its short-lived key. Importantly, the AP
-can do so without help from the producer because the producer may be dead for
-all we know.
+accessing content from other producers, we have the AP stop issuing this
+certificate for the compromised consumer only. Importantly, the AP can do so
+without help from the producer because the producer may be dead for all we know.
 
 To restore an account, we rely on the identity system. To support account
 restoration, the underlying identity system must provide a mechanism for
@@ -1977,18 +1986,21 @@ Here, we list them off for easy picking.
 \chapter{Authentication Protocol}
 \label{chap:auth}
 
-\newcommand{\Vv}{\Vvec(\vec{a})}
-\newcommand{\Cv}{\Cvec(s_1, \vec{a})}
-\newcommand{\Pv}{\PvecP(\vec{b})}
-\newcommand{\Sv}{\PvecS(\vec{b})}
+\newcommand{\Vv}{\Vvec(\mathbb{A})}
+\newcommand{\Cv}{\Cvec(s_1, \mathbb{B})}
+\newcommand{\mCv}{\mCvec(s_1, \mathbb{B})}
+\newcommand{\Pv}{\PvecP(\mathbb{B})}
+\newcommand{\Sv}{\PvecS(\mathbb{B})}
+\newcommand{\Pvg}{\PvecG(\mathbb{B})}
 
 This chapter covers the authentication protocol in detail from a systems
-perspective.
+perspective without explaining the underlying crypto.
 
 \section{Primitives}
 
 Before we can cover the authentication protocol, we need to know what tools we
-have in our arsenal.
+have in our arsenal. We won't explain how they work quite yet but we need to
+know what we can use.
 
 \subsection{Standard Tools}
 
@@ -2002,54 +2014,34 @@ reasonable assumptions where appropriate. When we say encryption, we mean
 authenticated randomized encryption. When we say hashing, we're talking about
 cryptographically secure hashing with preimage resistance.
 
-\subsection{Inner-Product Encryption}
+\subsection{Zero Knowledge Set Intersection}
 
-DRACL uses an extension of inner product encryption (see \cref{chap:crypto}) to
-allow a consumer to prove to a content host that they are in a group listed in
-an ACL.
+DRACL needs a way for consumers to be able to prove to the content host that the
+set of groups that they are in intersect with a set of groups listed in an ACL
+(without revealing either set of groups to either party). Unfortunately, this
+didn't exist so we had to create a new primitive based on something called inner
+product encryption (see \cref{chap:crypto}).
 
-An admin (in our case the producer) can generate special encrypted verifier
-bit-vectors ($\Vv$) and encrypted prover bit-vector key-pairs ($\Pv$, $\Sv$).
-Someone with one of these verifier bit-vectors can generate encrypted challenge
-bit-vectors ($\Cv$ where $s$ is a secret). Someone else with a prover bit-vector
-can prove that their prover bit-vector has a non-zero inner product with a given
-challenge bit-vector. We use this to allow consumers --- with prover bit-vectors
-that describe the groups that they are in --- to prove to content hosts --- with
-challenge bit-vectors that describe the groups that are in the ACL --- that the
-consumer is in some group listed in the ACL.
+An admin (in our case the producer) can generate special encrypted verifier sets
+($\Vv$) and encrypted prover set key-pairs ($\Pv$, $\Sv$). Someone with one of
+these verifier sets can generate encrypted challenge sets ($\Cv$ where $s$ is a
+secret). Someone else with a prover set can prove that their prover set
+intersects with a given challenge set. We use this to allow consumers --- with
+prover sets that describe the groups that they are in --- to prove to content
+hosts --- with challenge sets that describe the groups that are in the ACL ---
+that the consumer is in some group listed in the ACL. All of these functions
+take an implied parameter $p$ that describes the producer's environment (i.e.,
+their secret keys).
 
-Crucially, all these bit-vectors are encrypted and hidden from all parties
-except the admin (producer).
-
-\subsection{Unlinkable Public Keys}
-
-TODO
-
-\section{Setup}
-
-\subsection{ACL}
-
-In DRACL, every ACL includes a $\Vv$ where $\vec{a}$ is a bit-vector that
-describes the groups that should be granted access. Additionally, every ACL
-lists the producer's public identity key and the producer's AP. Finally, every
-ACL is signed by the producer's identity key to allow the consumer to verify
-that it hasn't been tampered with.
-
-\subsection{ACL Key}
-
-Every consumer's ACL Private Key includes a $\Pv$ and their ACL Public Key
-includes a $\Sv$ where $\vec{b}$ encodes the groups in which the consumer is a
-member. Additionally, the consumer has a certificate on $\Sv$ that certifies the
-time period for which it is valid. This certificate is signed by both the
-producer and the producer's AP.
+Note: crucially, all these sets are encrypted and hidden from all parties except
+the admin (producer).
 
 \section{Protocol}
+\label{sec:proto-detail}
 
-Abstractly, the protocol is simple: the content host chooses a secret scalar
-$s$, gives the consumer some encrypted form of $s$, and then gets back some form
-of $s$ that the consumer wouldn't have been able to compute if the inner product
-of $\vec{a}$ and $\vec{b}$ were zero. We've duplicated the protocol diagram from
-\cref{sec:authentication} (\cref{fig:auth2}) and refer to it liberally.
+First, we cover the protocol without explaining the cryptography behind it.
+We've also duplicated the protocol diagram from \cref{sec:authentication}
+(\cref{fig:auth2}) and refer to it liberally.
 
 \begin{figure}
     \includegraphics{auth.eps}
@@ -2057,12 +2049,42 @@ of $\vec{a}$ and $\vec{b}$ were zero. We've duplicated the protocol diagram from
     \label{fig:auth2}
 \end{figure}
 
-\subsection{Attempt Access}
+\subsection{Setup}
+
+\subsubsection{ACL}
+
+In DRACL, every ACL includes a $\Vv$ where $\mathbb{A}$ is a set that describes
+the groups that should be granted access. Additionally, every ACL lists the
+producer's public identity key and the producer's AP. Finally, every ACL is
+signed by the producer's identity key to allow the consumer to verify that it
+hasn't been tampered with.
+
+\subsubsection{ACL Key}
+\label{sec:proto-acl-key}
+
+Every consumer's ACL Private Key includes a $\Pv$ and their ACL Public Key
+includes a $\Sv$ where $\mathbb{B}$ encodes the groups in which the consumer is
+a member. Additionally, the consumer has two certificates --- one from the
+producer and one from the AP --- on $\Pv$ that certify the time period for which
+it is valid.
+
+\subsection{Protocol}
+
+\note{In our first pass at the protocol, we leave off a crucial privacy feature.
+  Implementors must read this entire chapter.}
+
+Abstractly, the protocol is simple: the content host chooses a secret scalar
+$s$, gives the consumer some encrypted form of $s$, and then gets back some form
+of $s$ that the consumer wouldn't have been able to compute if the intersection
+of $\mathbb{a}$ and $\mathbb{b}$ were zero.
+
+\subsubsection{Attempt Access}
+\label{sec:proto-attempt-access}
 
 When a consumer attempts to access a protected piece of content (1), the content
 host returns the signed ACL to the consumer which includes $\Vv$ (2).
 
-\subsection{Pre-Verify}
+\subsubsection{Pre-Verify}
 
 The consumer first verifies the signature on the ACL and decides whether or not
 to even attempt to authenticate against the ACL (e.g., they may not be friends
@@ -2072,62 +2094,145 @@ They (the consumer) then pre-verifies (3) that they should be able to
 authenticate against the ACL by running the cryptographic part of
 authentication protocol locally (pretending to be the content host).
 
-\subsection{Generate Setup Material}
+\subsubsection{Generate Setup Material}
+\label{sec:proto-setup-material}
 
-If they choose to continue, they then re-randomize (4) their ACL Public Key
-\allowbreak($\rand(\Pv)$) and send it to the content host along with the certificate (5).
-This re-randomization ensures that the ACL Public Key does not uniquely identify
-the consumer.
+\note{Make sure to read \cref{sec:proto-random-key} for a crucial change to
+  this step.}
 
-The content host verifies the certificate on $\rand(\Pv)$ and verifies
-that it is currently valid: the key hasn't expired and has been signed by
-both the producer and the producer's AP.
+If they choose to continue, the consumer sends their ACL Public Key to the
+content host along with the certificate (5).
 
-\subsection{Challenge Generation}
+The content host verifies the certificate on $\Pv$ and verifies that it is
+currently valid: the key hasn't expired and has been signed by both the producer
+and the producer's AP.
+
+\subsubsection{Challenge Generation}
 
 The content host then generates two secrets ($s_1$ and $s_2$) and creates a
-challenge $\Cv$ from $s_1$ and $\Vv$ (6). They also use the consumer's
-randomized ACL Public Key ($\rand(\Pv)$), $s$, and $\Vv$ to generate $P =
-\Proof(\Cv, \allowbreak\rand(\Pv))$. This is the proof that the consumer must
-generate. The content host can generate this without knowing an appropriate
-$\Sv$ because they know $s_1$.
+challenge (6):
+\begin{equation*}
+  \Cv = \mCv
+\end{equation*}
+
+They also use the consumer's ACL Public Key ($\Pv$), $s$, and $\Vv$ to predict
+the proof that the consumer will generate:
+\begin{align*}
+  P &= \Proof(\Cv, \allowbreak\Pv) \\
+    &= \pProof(\Cv, s, \Pv)
+\end{align*}
+The content host can generate this without knowing an appropriate $\Sv$ because
+they know $s_1$.
 
 The content host then computes $T = \hash(P)$, and symmetrically encrypts the
 $(s_1, s_2)$ pair using $T$ as the secret key to produce $E$ (6).
 
 The content host then sends $\Cv$ and $E$ to the consumer (7).
 
-\subsection{Proving Access}
+\subsubsection{Proving Access}
 
-The consumer computes $P = \Proof(\Cv, \rand(\Pv))$ from $\Cv$, $\rand(\Pv)$,
-and $\Sv$. They then hash it to recover $T$, and then decrypt $E$ to recover
-$(s_1, s_2)$.
+The consumer computes the proof from $\Cv$ and $\Sv$:
+\begin{align*}
+  P &= \Proof(\Cv, \Pv) \\
+    &= \mProof(\Cv, \Sv)
+\end{align*}
+They then hash it to recover $T$, and then decrypt $E$ to recover $(s_1, s_2)$.
 
 Now, the consumer re-creates $\Cv$ from $\Vv$ using $s_1$ to verify that the
 content host followed the protocol correctly. This ensures that the content host
 can't fish for additional information by giving the consumer a malformed
-challenge (or one that doesn't correspond to the ACL presented in step 1).
+challenge or one that doesn't correspond to the ACL presented in
+\cref{sec:proto-attempt-access}.
 
 The consumer then symmetrically signs (HMACs) a statement ``proof of membership
 for \texttt{domain\_of\_content\_host}'' with $s_2$ (8) and sends this back to
 the content host as proof that they should be granted access to the content.
 
-\subsection{Verification}
+\subsubsection{Verification}
 
 Finally, the content host verifies the HMAC using $s_2$ (10), verifies that the
 consumer knows what content host they are talking to to prevent man in the
 middle attacks, and finally grants them access to the content (11).
 
+\subsection{Randomizable Public Keys}
+\label{sec:proto-random-key}
+
+\sloppy The protocol as described so far does not preserve consumer anonymity
+because $\Pv$ is unique to the consumer. However, we can fix this by giving
+consumers special re-randomizable keys. That is, we give consumers $\Pvg$ and a
+function $\rand$ that takes a randomization parameter $r$, the $\PvecG$, and
+spits out a randomized $\Pv$ and $\Sv$.
+
+Unfortunately, this means that we can't certify $\Pv$ directly using standard
+asymmetric cryptography because it's generated by the consumer. To fix this, we
+use a special homomorphic signature scheme to sign $\Pvg$ that can tolerate this
+re-randomization and put the public key of this scheme in the certificate.
+
+We'll define $\HsigG(\Hp, G)$ to be a re-randomizable signature on a the
+$\PvecG$ $G$ belonging to some key $\Hp$. We also modify $\rand$ to accept a set
+of $\HsigG(G)$'s and spit out a matching set of $\Hsig(\Pv)$'s. That is, given
+$G =\Pvg$: \vspace{-2em}
+\begin{singlespace}
+\begin{align*}
+  ( \\
+    &~~~~\Pv_r,  \\
+    &~~~~\Sv_r, \\
+    &~~~~\Hsig(\Hp, \Pv_r),\\
+    &~~~~\ldots \\
+  ) &= \rand(G,~\HsigG(\Hp, G), \ldots)
+\end{align*}
+\end{singlespace}
+
+We define a function $\vh$ that can verify some signature $\sigma = \Hsig(\Hp, \Pv)$:
+\begin{align*}
+  \vh(\Hp, \sigma, \Pv)
+\end{align*}
+
+Concretely, we make the following modifications.
+
+\subsubsection{Setup}
+
+We now give the consumer $G = \Pvg$ in the setup phase
+(\cref{sec:proto-acl-key}) instead of directly giving them $\Pv$ and $\Sv$.
+Additionally, instead of directly certifying $\Pv$, both the content host and
+the AP create their own homomorphic keypairs (consistent between all consumers),
+sign $G$ with these key-pairs ($\gamma_p = \Hsig(\Hp_p, G)$), and then certify
+the key-pairs themselves.
+
+\subsubsection{Generate Setup Material}
+
+In the Generate Setup Material (\cref{sec:proto-setup-material}) phase, we have
+the consumer generate fresh a fresh $\Pv$, $\Sv$ and homomorphic signatures:
+\vspace{-3em}
+\begin{singlespace}
+\begin{align*}
+  ( \\
+    &~~~~\Pv,~\Sv, \\
+    &~~~~\sigma_{\mathit{producer}},~\sigma_{\mathit{AP}} \\
+  ) &= \rand( r,  G,  \gamma_{\mathit{producer}},\gamma_{\mathit{AP}})
+\end{align*}
+\end{singlespace}
+
+\subsubsection{Challenge Generation}
+
+In the challenge generation phase, we have the content host verify the
+consumer's $\Pv$ by calling $\vh(\Hp_p, \sigma_p, \Pv)$ and then verifying the
+certificate on $\Hp_p$ for both the producer's AP and the producer.
 
 \chapter{Crypto}
 \label{chap:crypto}
 
-\textit{A huge thanks to Prof. Vinod Vaikuntanathan (CSAIL, MIT) for extensive
-  help (and hand-holding) while developing the crypto for DRACL.}
+In the previous chapter, we assumed that there was some way for consumers to
+prove that their $\Sv$ intersects with the ACL's $\Vv$. In this chapter, we
+explain how we actually do this. However, we first re-describe the entire
+protocol from scratch from a a crypto perspective as opposed to a systems
+security perspective as we did above. This allows us to separate systems
+security concerns from cryptographic concerns and makes it easier to understand
+the crypto.
 
-In DRACL, we needed a way for consumers to prove that the set of groups in which
-they are a member intersects the set of groups that listed in an ACL. There are
-three requirements that make this difficult:
+To reiterate the problem, we needed a way for consumers to prove that the set of
+groups in which they are a member intersects the set of groups that listed in an
+ACL. There are three requirements that make this difficult:
 
 \begin{enumerate}
 \item These sets must remain secret from both parties. That is, we allow neither
@@ -2140,25 +2245,26 @@ three requirements that make this difficult:
   time. That is, ACL Keys must expire.
 \end{enumerate}
 
-\section{Reduction To Math}
+We now describe some cryptographic tools that allow us to meet these
+requirements.
+
+\section{Formalizing The Problem}
 \label{sec:reduce-to-math}
 
 To solve any problem with crypto, it must first be reduced to concrete math
 (unless you have a ready-made crypto primitive that solves your problem for you
-but we don't have that). In DRACL, every ACL includes a specially encrypted bit
-vector of groups $\vec{a}$ that can access the content and every consumer is
-given an encrypted bit vector of groups $\vec{b}$ in which they are a member
-(the ACL Key). When authenticating, the consumer takes the inner product of
-these two encrypted vectors, and, if the inner product is non-zero, the content
-host grants them access. The tricky part is encrypting these vectors such that
-the consumer can prove to the content host that the vectors have a non-zero
-inner product without revealing anything more than that and that $\vec{b}$ has
-not expired.
+but we don't have that). So, first, we need a way to encode our sets of groups.
+We do so by turning them into bit-vectors (1 for present, 0 for not present).
+Now the set-intersection problem becomes an inner-product problem and the
+consumer needs to prove that their encrypted bit-vector $\vec{b}$ intersects
+with the ACL's encrypted bit-vector $\vec{a}$. The tricky part is not revealing
+the bit-vectors (to either the consumer or content host) and ensuring that
+consumers can't use expired vectors.
 
 To hide the vectors, DRACL uses a function-hiding inner product encryption
 scheme described by Bishop, Jain and Kowalczyk \cite{inner-product} along with
 the privacy improvement described by Lin (in chapter 4)
-\cite{inner-product-ext}.This allows us to compute an inner product of two
+\cite{inner-product-ext}. This allows us to compute an inner product of two
 secret vectors without ever revealing anything about the vectors other than the
 inner product.
 
@@ -2174,19 +2280,19 @@ inner product.
 \newcommand{\Bp}{\vec{\beta}}
 \newcommand{\ABp}{\iprod{\Ap}{\Bp}}
 
-The details of this inner product encryption scheme are a bit messy so we're
-going to abstract them away by defining a few functions. We define the functions
-\allowbreak$\ein_1$, $\ein_2$, $\eins_1$, $\eins_2$, and $\eouts$. $\ein_i$
-takes a length-two vector of cryptographic parameters and a vector to be
-encrypted. $\eins_i$ just takes the cryptographic parameter vector without the
-vector to be encrypted. $\eouts$ takes a scalar.
+\sloppy The details of this inner product encryption scheme are a bit messy so
+we're going to abstract them away by defining a few functions. We define the
+functions $\ein_1$, $\ein_2$, $\eins_1$, $\eins_2$, and $\eouts$. $\ein_i$ takes
+a length-two vector of cryptographic parameters and a vector to be encrypted.
+$\eins_i$ just takes the cryptographic parameter vector without the vector to be
+encrypted. $\eouts$ takes a scalar.
 
-The inner product encryption scheme can (using a function $\pair$) combine
-\allowbreak$\ein_1(\Ap, \vec{a})$ and \allowbreak$\ein_2(\Bp, \vec{b})$ to
-produce $\eouts(\ABp\cdot\iprod{\vec{a}}{\vec{b}})$ where $\Ap$ and $\Bp$ are
-the length-two parameter vectors and $\vec{a}$ and $\vec{b}$ are the vectors two
-be encrypted. Additionally, one can combine (again, using $\pair$)
-$\eins_1(\Ap)$ and $\eins_2(\Bp)$ to produce $\eouts(\ABp)$.
+\sloppy The inner product encryption scheme can (using a function $\pair$)
+combine $\ein_1(\Ap, \vec{a})$ and \allowbreak$\ein_2(\Bp, \vec{b})$ to produce
+$\eouts(\ABp\cdot\iprod{\vec{a}}{\vec{b}})$ where $\Ap$ and $\Bp$ are the
+length-two parameter vectors and $\vec{a}$ and $\vec{b}$ are the vectors two be
+encrypted. Additionally, one can combine (again, using $\pair$) $\eins_1(\Ap)$
+and $\eins_2(\Bp)$ to produce $\eouts(\ABp)$.
 
 $\eins$, $\ein$, and $\eouts$ all have the following properties: 
 \begin{enumerate}
@@ -2199,49 +2305,42 @@ $\eins$, $\ein$, and $\eouts$ all have the following properties:
   $\ein_1(\ldots, \vec{a})$ and $\ein_2(\ldots, \vec{b})$, it's possible to
   learn the inner product of these two vectors but nothing more. This was proven
   in \cite{inner-product} and \cite{inner-product-ext}.
-\item Given $\ein_1(s \cdot \Ap, \vec{a})$, \allowbreak$\ein_2(\Bp, \vec{b})$,
-  \allowbreak$\eins_1(\Ap)$, and \allowbreak$\eins_2(\Bp)$, it's hard to compute
-  $\eouts(s\cdot\ABp)$ unless $\iprod{\vec{a}}{\vec{b}}$ is non-zero. We prove
-  this in \cref{sec:crypto-sec}.
+\item \sloppy Given $\ein_1(s \cdot \Ap, \vec{a})$, $\ein_2(\Bp, \vec{b})$,
+  $\eins_1(\Ap)$, and $\eins_2(\Bp)$, it's hard to compute $\eouts(s\cdot\ABp)$
+  unless $\iprod{\vec{a}}{\vec{b}}$ is non-zero. We prove this in
+  \cref{sec:crypto-sec}.
 \end{enumerate}
 
-Now that we've abstracted away some of the underlying crypto, we can talk about
-our actual authentication protocol.
+Now that we've abstracted away some of the underlying crypto, we can define the
+functions used in \cref{sec:proto-detail} in terms of these abstractions. After
+that, we'll peel back the abstraction and reduce everything to math.
 
 \section{Authentication Protocol}
 
-In this section, we discuss how we use the cryptographic tools introduced above
-to build our authentication protocol.
+Again, as noted in the protocol chapter (\cref{chap:auth}) the protocol is
+abstractly simple. The content host chooses a secret scalar $s$, gives the
+consumer some encrypted form of $s$, and then gets back some form of $s$ that
+the consumer wouldn't have been able to compute if $\iprod{\vec{a}}{\vec{b}}$
+were zero. Below, we give a first attempt at the protocol and then fix some
+problems in the following sections. This section parallels
+\cref{sec:proto-detail} but from a crypto perspective.
 
-\subsection{Basic Authentication Protocol}
+\subsection{Setup}
 
-Again, as noted in the authentication protocol chapter (\cref{chap:auth}) the
-protocol is abstractly simple. The content host chooses a secret scalar $s$,
-gives the consumer some encrypted form of $s$, and then gets back some form of
-$s$ that the consumer wouldn't have been able to compute if
-$\iprod{\vec{a}}{\vec{b}}$ were zero.
+In every ACL, the producer includes $C_1 = \ein_1(\Ap, \vec{a})$ --- an
+encryption of $\vec{a}$ --- and $C_2 = \eins_1(\Ap)$.\footnote{$(C_1, C_2)$ was
+  $\Vv$ in \cref{chap:auth}}
 
-Below, we give a first attempt at the protocol and then fix some problems with
-it in the following sections.
+In the consumer's ACL Key, the producer includes $K_1 = \ein_2(\Bp,
+\vec{b})$\footnote{$\Sv$ in \cref{chap:auth}} --- an encryption of $\vec{b}$ ---
+as the ACL Private Key and $K_2 = \eins_2(\Bp)$\footnote{$\Pv$ in
+  \cref{chap:auth}} as the ACL Public Key. Additionally, we include a certificate
+  on $K_2$ certifying it as valid for some period of time.
 
-\subsubsection{Setup}
+\subsection{Protocol}
 
-The producer includes $C_1 = \ein_1(\Ap, \vec{a})$ --- an encryption of
-$\vec{a}$ --- and $C_2 = \eins_1(\Ap)$ in every ACL. In \cref{chap:auth}, this
-was $\Vv$.
-
-In the consumer's ACL Key, the producer includes $K_1 = \ein_2(\Bp, \vec{b})$
---- an encryption of $\vec{b}$ --- as the ACL Private Key and $K_2 =
-\eins_2(\Bp)$ and a certificate on $K_2$ --- certifying it as a valid ACL Public
-Key for some period of time --- as the ACL Public Key. In \cref{chap:auth},
-$K_1$ was $\Sv$ and $K_2$ was part of $\Pv$ (the real $\Pv$ as a few more pieces
-that we'll discuss later).
-
-\subsubsection{Protocol}
-
-The content host sends the consumer the ACL ($C_1$, $C_2$). They (the consumer)
-then computes:
-
+When authenticating a consumer, the content host first sends the consumer the
+ACL ($C_1$, $C_2$). They (the consumer) then computes:
 \begin{align*}
   \eouts(\ABp)          &= \pair(\eins_1(\Ap), \eins_2(\Bp)) \tag{1} \\
                         &= \pair(C_2, K_2) \\
@@ -2251,43 +2350,57 @@ then computes:
 \end{align*}
 
 If $\eouts(c \cdot \ABp)$ is $1$, authentication has failed and the consumer
-aborts (this is the pre-verification step). Otherwise, they can brute-force $c$
-because it must be small (it's the size of the intersection) by repeatedly using
-$\combine$ on $\eouts(\ABp)$ (that is, $\combine(\stackrel{\text{\tiny ?}}{c}, 0, \eouts(\ABp),
-\eouts(\ABp))$).
+abort. this is the pre-verification step).
 
 Next, the consumer sends their ACL Public Key to the content host ($K_2$ and the
 certificate on $K_2$) to the content host (not randomized but we'll get to that
 in \cref{sec:anon-crypto}). The content host verifies the certificate and
 verifies that $K_2$ is currently valid.
 
-The content host then computes $C^s = \ein_1(s\cdot\Ap, \vec{a})$ and $R =
-\pair(\eins(s\cdot \Ap),\,\eins_2(\Bp)) = \eouts(s\cdot \ABp)$. They send $C^s$
-to the consumer and record $R$. The consumer then computes:
+The content host then computes:
+\begin{align*}
+  C^s &= \ein_1(s\cdot\Ap, \vec{a}) \\
+  R   &= \pair(\eins(s\cdot \Ap),\,\eins_2(\Bp)) \\
+      &= \eouts(s\cdot \ABp)
+\end{align*}
 
+
+They send $C^s$\footnote{$\Cv$ in \cref{chap:auth}} to the consumer and record
+$R$\footnote{$\Proof(\Cv, \Pv)$ in \cref{chap:auth}}.
+
+The consumer then computes:
 \begin{align*}
   \eouts(sc \cdot \ABp) &= \eouts(s \cdot \ABp \cdot \iprod{\vec{a}}{\vec{b}}) \tag{3} \\
                         &= \pair(\ein_1(s \cdot \Ap, \vec{a}), \ein_2(\Bp, \vec{b})) \\
                         &= \pair(\ein_1(s \cdot \Ap, \vec{a}), K_2) \\
 \end{align*}
 
-They then use $c$ and (3) to compute $\eouts(s\cdot\ABp)$ and prove to the
-content host that they know this value (e.g., send it to them). Given propriety
-3 from \cref{sec:reduce-to-math}, this would have been hard if the two vectors
-had a non-zero inner product.
 
-Unfortunately, $\Bp$ and, in-turn, $K_2$ uniquely identify the consumer which
-violates our anonymity requirement.
+They can then brute-force $c$ because it must be small (it's the size of the
+intersection) by repeatedly using $\combine$ on $\eouts(\ABp)$ (which they
+learned during pre-verification). That is, they repeatedly call the following 
+until they find a $\stackrel{\text{\tiny?}}{c}$ that works:
+\begin{align*}
+  \combine(\stackrel{\text{\tiny ?}}{c}, 0, \eouts(\ABp), \eouts(\ABp)) \stackrel{?}{=} \eouts(c\cdot\ABp)
+\end{align*}
+
+They then use this $c$ and (3) to compute $\eouts(s\cdot\ABp)$\footnote{$\Proof(\Cv,
+\Pv)$ in \cref{chap:auth}} and prove to the content host that they know this
+value. Given propriety 3 from \cref{sec:reduce-to-math}, this would have been
+hard if the two vectors had a non-zero inner product.
+
+Unfortunately, the protocol as describe so far doesn't meet our anonymity
+requirement. $\Bp$ and, in-turn, $K_2$ uniquely identify the consumer.
 
 \subsection{Anonymity}
 \label{sec:anon-crypto}
 
-To hide the consumer's identity, we randomize the consumer's ACL Public Key in
-such a way that still allows the consumer to take the inner product between
-$\vec{a}$ and $\vec{b}$. To do so, we give the consumer two keys that encode the
-same vector but have different $\Bp$'s and allow them to take linear
-combinations. Linear combinations randomize $\Bp$ and hide the user's identity.
-That is, given:
+To hide the consumer's identity, we randomize\footnote{$\rand$ in
+  \cref{chap:auth}} the consumer's ACL Public Key in such a way that still
+allows the consumer to take the inner product between $\vec{a}$ and $\vec{b}$ .
+To do so, we give the consumer two keys that encode the same vector but have
+different $\Bp$'s and allow them to take linear combinations. Linear
+combinations randomize $\Bp$ and hide the user's identity. That is, given:
 \begin{align*}
   K_1 &= \ein_2(\Bp, \vec{b}) & K_2 &= \eins_2(\Bp) \\
   K^\prime_1 &= \ein_2(\Bp^\prime, \vec{b}) & K^\prime_2 &= \eins_2(\Bp^\prime)
@@ -2312,56 +2425,54 @@ almost gives us what we want. The specific scheme proposed assumes that the
 vectors will be in the clear, not encrypted like in our scheme. However, some
 modifications make this scheme work with DRACL. We don't discuss them here
 because the details rely on the specific definitions of the abstract functions
-we've been using.
+we've been using. Instead, you can find the details in \cref{sec:homo-sig}.
 
 % Luckily, we were able to modify an existing homomorphic signature scheme created
 % for something called network coding (described in \cite{signature}) to fit our
 % needs. You can read \cref{sec:homo-sig} if you want to know how this signature
 % scheme works.
 
-TODO: LINK TO SECTION
+% \subsection{Two Factors}
+% 
+% Another problem with this scheme is that we want to allow the consumer to
+% authenticate with two keys: one signed by the AP and the other signed by the
+% producer (refer to \cref{sec:revoke}).
+% 
+% Recall that we're storing all these keys on the producer's AP and the consumer
+% is fetching them as needed. The ACL Private Key is encrypted so the AP can't
+% mess with it however, we don't need to encrypt the ACL Public Key.
+% 
+% So, we can have the AP take two linear combinations of $K_2$ and $K_2^\prime$
+% ($K^{(AP)}_2$ and $K^{(AP)\prime}_2$), sign them, and then give them to the
+% consumer along with a description of the linear combination the AP took.
+% 
+% After the consumer downloads their keys, they can can take the same linear
+% combinations of their $K_1$ and $K_1^\prime$ to get $K^{(AP)}_1$ and $K^{(AP)\prime}_1$.
+% 
+% Now, the consumer can authenticate twice: once with each of these keys.
+% 
+% \subsection{Faster Crypto}
+% 
+% At this point, we have everything we need. However, we can cut the (really
+% expensive) crypto done by the client by a third. Recall, the client currently
+% takes the inner product of the encrypted vectors 3 times: once for
+% pre-verification, twice for authentication (once for each key). However, given
+% that these vectors are actually just linear combinations of each other and we're
+% allowed to take linear combinations, we can combine the AP's and producer's keys
+% into a single key and authenticate with it in one go.
+% 
+% Basically, we make the following changes.
+% 
+% \begin{enumerate}
+% \item Content host: Instead of using $K_2^r$ and $K^{(AP)~r}_2$
+%   separately, the content host adds them together to produce a single
+%   $K_2^{(combined)} = \combine(1, 1, K_2^r, K^{(AP)~r}_2)$ (after verifying the certificates, of course).
+% \item Consumer: The consumer adds together both ACL Private Keys ($K_1^r$ and
+%   $K^{(AP)~r}_1$) and then uses them as a single $K_1^{(combined)} = \combine(1,
+%   1, K_1^r, K^{(AP)~r}_1)$.
+% \end{enumerate}
 
-\subsection{Two Factors}
-
-Another problem with this scheme is that we want to allow the consumer to
-authenticate with two keys: one signed by the AP and the other signed by the
-producer (refer to \cref{sec:revoke}).
-
-Recall that we're storing all these keys on the producer's AP and the consumer
-is fetching them as needed. The ACL Private Key is encrypted so the AP can't
-mess with it however, we don't need to encrypt the ACL Public Key.
-
-So, we can have the AP take two linear combinations of $K_2$ and $K_2^\prime$
-($K^{(AP)}_2$ and $K^{(AP)\prime}_2$), sign them, and then give them to the
-consumer along with a description of the linear combination the AP took.
-
-After the consumer downloads their keys, they can can take the same linear
-combinations of their $K_1$ and $K_1^\prime$ to get $K^{(AP)}_1$ and $K^{(AP)\prime}_1$.
-
-Now, the consumer can authenticate twice: once with each of these keys.
-
-\subsection{Less Crypto}
-
-At this point, we have everything we need. However, we can cut the (really
-expensive) crypto done by the client by a third. Recall, the client currently
-takes the inner product of the encrypted vectors 3 times: once for
-pre-verification, twice for authentication (once for each key). However, given
-that these vectors are actually just linear combinations of each other and we're
-allowed to take linear combinations, we can combine the AP's and producer's keys
-into a single key and authenticate with it in one go.
-
-Basically, we make the following changes.
-
-\begin{enumerate}
-\item Content host: Instead of using $K_2^r$ and $K^{(AP)~r}_2$
-  separately, the content host adds them together to produce a single
-  $K_2^{(combined)} = \combine(1, 1, K_2^r, K^{(AP)~r}_2)$ (after verifying the certificates, of course).
-\item Consumer: The consumer adds together both ACL Private Keys ($K_1^r$ and
-  $K^{(AP)~r}_1$) and then uses them as a single $K_1^{(combined)} = \combine(1,
-  1, K_1^r, K^{(AP)~r}_1)$.
-\end{enumerate}
-
-\subsection{Tearing Down The Abstraction}
+\section{Tearing Down The Abstraction}
 
 Finally, we can tear down our abstraction. Luckily, it maps directly to the
 underlying function-hiding inner product encryption crypto.
@@ -2371,23 +2482,57 @@ groups to the elements of the vector. That is, $g_i^{\vec{v}} = (g_i^{v_1},
 g_i^{v_2}, \ldots, g_i^{v_n})$.
 
 Then, given the vectors $\vec{d}$, $\vec{d^\star}$, $\vec{b}$, and $\vec{b^*}$
-as described in \cite{signature} and a bilinear pairing function $\e$, the
+as described in \cite{inner-product} and a bilinear pairing function $\e$, the
 functions we've been using map to the underlying crypto protocol as described in
-\cref{fig:abstraction}.
+\cref{fig:abstraction}. Additionally, unlike \cite{inner-product}, we scale the
+$\vec{b^*}_{2n+1}$ and $\vec{b^*}_{2n+3}$ in $\ein_1(\Ap, \vec{x})$ by random
+independent $r_1$ and $r_2$ factors chosen fresh for each encryption of
+$\vec{x}$. This does not affect privacy (proof in
+\cref{proof:signature-modification}) but allows our security proof to go
+through.
 
 \begin{figure}[H]
 \label{fig:abstraction}
 \begin{align*}
-  \eins_1(\Ap) &= g_1^{\alpha_1\vec{d^*}_1 + \alpha_2\vec{d^*}_2} && \text{; In \cite{signature}, $\alpha_1 = \alpha$ and $\alpha_2 = \tilde{\alpha}$.} \\
-  \eins_2(\Bp) &= g_2^{\beta_1\vec{d}_1 + \beta_2\vec{d}_2} && \text{; In \cite{signature}, $\beta_1 = \beta$ and $\beta_2 = \tilde{\beta}$.} \\
-  \ein_1(\Ap, \vec{x}) &= g_1^{\alpha_1\left(\sum_{x_i \in \vec{x}}{_i\vec{b^*}_i} + \vec{b^*}_{2n+1}\right) + \alpha_2\left(\sum_{x_i \in \vec{x}}{x_i\vec{b^*}_i} + \vec{b^*}_{2n+3}\right)} \\
-  \ein_2(\Bp, \vec{x}) &= g_2^{\beta_1\left(\sum_{x_i \in \vec{x}}{_i\vec{b}_i} + \vec{b}_{2n+1}\right) + \beta_2\left(\sum_{x_i \in \vec{x}}{x_i\vec{b}_i} + \vec{b}_{2n+3}\right)} \\
+  \eins_1(\Ap) &= g_1^{\alpha_1\vec{d^*}_1 + \alpha_2\vec{d^*}_2} && \text{; In \cite{inner-product}, $\alpha_1 = \alpha$ and $\alpha_2 = \tilde{\alpha}$.} \\
+  \eins_2(\Bp) &= g_2^{\beta_1\vec{d}_1 + \beta_2\vec{d}_2} && \text{; In \cite{inner-product}, $\beta_1 = \beta$ and $\beta_2 = \tilde{\beta}$.} \\
+  \ein_1(\Ap, \vec{x}) &= g_1^{\alpha_1\left(\sum_{x_i \in \vec{x}}{x_i\vec{b^*}_i} + r_1\vec{b^*}_{2n+1}\right) + \alpha_2\left(\sum_{x_i \in \vec{x}}{x_i\vec{b^*}_{n+i}} + r_2\vec{b^*}_{2n+3}\right)} \\
+  \ein_2(\Bp, \vec{x}) &= g_2^{\beta_1\left(\sum_{x_i \in \vec{x}}{x_i\vec{b}_i} + \vec{b}_{2n+2}\right) + \beta_2\left(\sum_{x_i \in \vec{x}}{x_i\vec{b}_{n+i}} + \vec{b}_{2n+4}\right)} \\
   \pair(a, b) &= \e(a, b) \\
   \eouts(a) &= \e(g_1, g_2)^a \\
   \combine(x, y, g_i^{\vec{u}}, g_i^{\vec{v}}) &= \left(g_i^{\vec{u}}\right)^x \cdot \left(g_i^{\vec{v}}\right)^y = g_i^{x\vec{u} + y\vec{v}}
 \end{align*}
 \caption{Cryptographic Abstraction}
 \end{figure}
+
+\section{The Homomorphic Signature Scheme}
+\label{sec:homo-sig}
+
+Now that we've mapped our crypto onto well-known cryptographic primitives (i.e.
+cryptographic pairing), we can explain the homomorphic signature scheme.
+Specifically, we need to sign a set of $K_2 = \eins_2(\Bp) =
+g_2^{\beta_1\vec{d}_1 + \beta_2\vec{d}_2}$ such that the signature is preserved
+under linear combination.
+
+To do this, we note that $K_2$ is of the form $(g_2^x, g_2^y)$ for some $x$
+and $y$. Given two $K_2$'s, we want the signature to be preserved under linear
+combination. That is, $(g_2^{ax_1 + bx_2}, g_2^{ay_1 + by_2})$ for some $a$ and $b$.
+
+For our signature scheme, we have the producer pick some $o_1$ and $o_2$,
+release $P = (g_1^{o_1}, g_1^{o_2})$ as a public key. The signature on $K_2$ is then
+$\sigma = g_2^{x\cdot o_1 + y\cdot o_2}$. To verify the signature, the content host
+verifies that $\e(g_1, \sigma) = \e(g_1^{o_1}, g_2^x) \cdot \e(g_1^{o_2},
+g_2^y)$. This is loosely based on \cite{signature}.
+
+Finally, when creating the certificate validating the ACL Key for a time period,
+the producer/AP certify $P$, not $K_2$ directly.
+
+\section{Putting It Together}
+
+Finally, we can tie these two chapters together by explicitly defining the
+functions used in \cref{chap:auth} with those defined here.
+
+TODO (Just map the functions together. Mindless bleh...
 
 
 %\section{Homomorphic Signature Scheme}
@@ -2613,6 +2758,10 @@ intersection).
 
 {\hfill $\square$}
 
+\section{Homomorphic Signature}
+
+TODO: Formalize our assumption and write this up.
+
 \section{Security}
 \label{sec:crypto-sec}
 
@@ -2692,62 +2841,77 @@ Then: \\
 
   \begin{enumerate}
   \item Pick $\alpha$, $\tilde{\alpha}$ as described in the paper.
+  \item Pick $r_1$ and $r_2$ randomly.
   \item Let \begin{flalign*}
       C_2 &= g_1^{\alpha\vec{d_1^*} + \tilde{\alpha} \vec{d_2^*}} \\
-      C_1 &= \left(g_1^q\right)^{\alpha\left(\sum_{\forall x_i \in \vec{x} | i \in \bar{\gamma}}{x_i\vec{b^*}_i}\right) + \tilde{\alpha}\left(\sum_{\forall x_i \in \vec{x} | i \in \bar{\gamma}}{x_i\vec{b^*}_i}\right)} \\
-        &\times \left(g_1\right)^{\alpha\left(\sum_{\forall x_i \in \vec{x} | i \in \gamma}{x_i\vec{b^*}_i} + \vec{b^*}_{2n+1}\right) + \tilde{\alpha}\left(\sum_{\forall x_i \in \vec{x} | i \in \gamma}{x_i\vec{b^*}_{n+i}} + \vec{b^*}_{2n+3}\right)}
+      C_1 &= \left(g_1^q\right)^{\alpha\left(\sum_{\forall x_i \in \vec{x} | i \in \bar{\gamma}}{x_i\vec{b^*}_i} + r_1\vec{b^*}_{2n+1}\right) + \tilde{\alpha}\left(\sum_{\forall x_i \in \vec{x} | i \in \bar{\gamma}}{x_i\vec{b^*}_i} + r_2\vec{b^*}_{2n+3}\right)} \\
+        &\times \left(g_1\right)^{\alpha\left(\sum_{\forall x_i \in \vec{x} | i \in \gamma}{x_i\vec{b^*}_i}\right) + \tilde{\alpha}\left(\sum_{\forall x_i \in \vec{x} | i \in \gamma}{x_i\vec{b^*}_{n+i}}\right)}
+    \end{flalign*}
+  \item If this is a target ACL, generate the target challenge:
+    \begin{flalign*}
+      C_{s} &= \left(g_1^{sq}\right)^{\alpha\left(\sum_{x_i \in \vec{x}}{x_i\vec{b^*}_i} + r_1\vec{b^*}_{2n+1}\right) + \tilde{\alpha}\left(\sum_{x_i \in \vec{x}}{x_i\vec{b^*}_i} + r_2\vec{b^*}_{2n+3}\right)}
+    \end{flalign*}
+\item Otherwise, generate a custom challenge with known $s^\prime$. Let
+    \begin{flalign*}
+      C_{s^\prime} &= C_1^{s^\prime} \\
     \end{flalign*}
   \end{enumerate}
-\item Generate the target challenges:
-\item Let \begin{flalign*}
-      C_{s} &= \left(g_1^{sq}\right)^{\alpha\left(\sum_{x_i \in \vec{x}}{x_i\vec{b^*}_i} + \vec{b^*}_{2n+1}\right) + \tilde{\alpha}\left(\sum_{x_i \in \vec{x}}{x_i\vec{b^*}_i} + \vec{b^*}_{2n+3}\right)}
-  \end{flalign*}
 \item Generate keys for all epochs other than the current one.
-  \begin{flalign*}
-    K_2 &= g_2^{\beta\vec{d_1} + \tilde{\beta}\vec{d_2}} \\
-    K_1 &= \left(g_2^{-q}\right)^{\alpha\left(\sum_{\forall y_i \in \vec{y} | i \in \bar{\gamma}}{y_i\vec{b}_i}\right) + \tilde{\alpha}\left(\sum_{\forall y_i \in \vec{y} | i \in \bar{\gamma}}{y_i\vec{b}_i}\right)} \\
-        & \times \left(g_2\right)^{\alpha\left(\sum_{\forall y_i \in \vec{y} | i \in \gamma}{y_i\vec{b}_i} + \vec{b}_{2n+1}\right) + \tilde{\alpha}\left(\sum_{\forall y_i \in \vec{y} | i \in \gamma}{y_i\vec{b^*}_{n+i}} + \vec{b}_{2n+3}\right)} \\
-  \end{flalign*}
-
+  \begin{enumerate}
+  \item First generate the keys:
+    \begin{flalign*}
+      K_2 &= g_2^{\beta\vec{d_1} + \tilde{\beta}\vec{d_2}} \\
+      K_1 &= \left(g_2^{-q}\right)^{\alpha\left(\sum_{\forall y_i \in \vec{y} | i \in \bar{\gamma}}{y_i\vec{b}_i}\right) + \tilde{\alpha}\left(\sum_{\forall y_i \in \vec{y} | i \in \bar{\gamma}}{y_i\vec{b}_i}\right)} \\
+      & \times \left(g_2\right)^{\alpha\left(\sum_{\forall y_i \in \vec{y} | i \in \gamma}{y_i\vec{b}_i} + \vec{b}_{2n+1}\right) + \tilde{\alpha}\left(\sum_{\forall y_i \in \vec{y} | i \in \gamma}{y_i\vec{b^*}_{n+i}} + \vec{b}_{2n+3}\right)} \\
+    \end{flalign*}
+  \item Then pick a random $o_1$ and $o_2$ as the homomorphic secret key for the
+    old epoch(s) and then generate the public key: $P = g_1^{(o_1,o_2)}$.
+  \item Finally, homomorphically sign the $K_2$'s for the old epoch(s) with the
+    old homomorphic keys:
+    \begin{flalign*}
+      \sigma(K_2) &= K_{2_1}^{o_1} \cdot K_{2_2}^{o_2} \\
+      \sigma(K_2^\prime) &= {K^\prime_{2_1}}^{o_1} \cdot {K^\prime_{2_2}}^{o_2}
+    \end{flalign*}
+  \end{enumerate}
 
 \item Generate keys for the current epoch for all consumers in
-  $\mathbf{Y_{\upsilon}}$ where $\beta = t\cdot \beta^\dagger$ and $\tilde{\beta} =
-  t\tilde{\beta^\dagger}$:
-  \begin{flalign*}
-    K_2 &= \left(g_2^t\right)^{\beta^\dagger\vec{d_1} + \tilde{\beta^\dagger}\vec{d_2}} \\
-    K_1 &= \left(g_2^t\right)^{\beta^\dagger\left(\sum_{y_i \in \vec{y}}{y_i\vec{b}_i} + \vec{b}_{2n+1}\right) + \tilde{\beta^\dagger}\left(\sum_{y_i \in \vec{y}}{y_i\vec{b}_i} + \vec{b}_{2n+3}\right)} \\
-    \\
-    K_2^\prime &= \left(g_2^t\right)^{\beta^\dagger\vec{d_1} + \tilde{\beta^\dagger}\vec{d_2}} \\
-    K_1^\prime &= \left(g_2^t\right)^{\beta^\dagger\left(\sum_{y_i \in \vec{y}}{y_i\vec{b}_i} + \vec{b}_{2n+1}\right) + \tilde{\beta^\dagger}\left(\sum_{y_i \in \vec{y}}{y_i\vec{b}_i} + \vec{b}_{2n+3}\right)} \\
-  \end{flalign*}
-
-\item First pick a random $o_1$ and $o_2$ as the homomorphic secret key for the
-  current epoch and then generate the public key: $P = g_1^{(o_1,o_2)}$.
-
-\item Pick a random $s_1$ and $s_2$ for the signature scheme and homomorphically
-  sign the $K_2$'s for the current epoch:
-  \begin{flalign*}
-    \sigma(K_2) &= K_{2_1}^{o_1} \cdot K_{2_2}^{o_2} \\
-    \sigma(K_2^\prime) &= {K^\prime_{2_1}}^{o_1} \cdot {K^\prime_{2_2}}^{o_2}
-  \end{flalign*}
+  $\mathbf{Y_{\upsilon}}$:
+  \begin{enumerate}
+  \item First, generate the keys where $\beta = t\cdot \beta^\dagger$ and $\tilde{\beta} = t\tilde{\beta^\dagger}$:
+    \begin{flalign*}
+      K_2^{\tau} &= \left(g_2^t\right)^{\beta^\dagger\vec{d_1} + \tilde{\beta^\dagger}\vec{d_2}} \\
+      K_1^{\tau} &= \left(g_2^t\right)^{\beta^\dagger\left(\sum_{y_i \in \vec{y}}{y_i\vec{b}_i} + \vec{b}_{2n+1}\right) + \tilde{\beta^\dagger}\left(\sum_{y_i \in \vec{y}}{y_i\vec{b}_i} + \vec{b}_{2n+3}\right)} \\
+      \\
+      {K_2^{\tau}}^\prime &= \left(g_2^t\right)^{\beta^\dagger\vec{d_1} + \tilde{\beta^\dagger}\vec{d_2}} \\
+      {K_1^{\tau}}^\prime &= \left(g_2^t\right)^{\beta^\dagger\left(\sum_{y_i \in \vec{y}}{y_i\vec{b}_i} + \vec{b}_{2n+1}\right) + \tilde{\beta^\dagger}\left(\sum_{y_i \in \vec{y}}{y_i\vec{b}_i} + \vec{b}_{2n+3}\right)} \\
+    \end{flalign*}
+  \item Then pick a random $o_1^\tau$ and $o_2^\tau$ as the homomorphic secret key for the
+    current epoch and then generate the public key: $P^\tau = g_1^{(o_1^\tau,o_2^\tau)}$.
+  \item Finally, homomorphically sign the $K_2^\tau$'s for the current epoch:
+    \begin{flalign*}
+      \sigma({K_2^{\tau}}) &= {K^{\tau}}_{2_1}^{o_1} \cdot {K^{\tau}}_{2_2}^{o_2} \\
+      \sigma({K_2^{\tau}}^\prime) &= {{K^{\tau}}^\prime_{2_1}}^{o_1} \cdot {{K^{\tau}}^\prime_{2_2}}^{o_2}
+    \end{flalign*}
+  \end{enumerate}
 \end{enumerate}
 
-We feed all $K_1$'s and $K_2$'s, all $C_1$'s and $C_2$'s, all challenges
-($C_s$), the homomorphic public key ($P$), and the signatures on $K_1$'s from
-the current epoch ($\sigma(K_1$).
+We feed all $K_1$'s and $K_2$'s, all $C_1$'s and $C_2$'s, all challenges ($C_s$,
+$C_{s^\prime}$), the homomorphic public keys ($P$), and the signatures on
+$K_2$'s from the all epochs ($\sigma(K_2$).
 
 To break our scheme, $f$ would have to produce $R = \e(g_1, g_2)^{s \cdot
-  \iprod{(\alpha, \tilde{\alpha})}{\vec{z}}}$, and some $K^{(t)}_{2} =
-(g_2)^{\vec{z}}$ where $\vec{z}$ is some length two vector. Additionally, it
-would have to signature $\sigma_k = \sigma(K^{(t)}_2)$ such that $\e(K^{(t)}_2,
-P) == \sigma_k$ (i.e., the signature verifies).
+  \iprod{(\alpha, \tilde{\alpha})}{\vec{z}}}$, and some
+$K^{(\mathit{target})}_{2} = (g_2)^{\vec{z}}$ where $\vec{z}$ is some length two
+vector. Additionally, it would have to signature $\sigma_k =
+\sigma(K^{(\mathit{target})}_2)$ such that $\e(K^{(\mathit{target})}_2, P^\tau)
+== \sigma_k$ (i.e., the signature verifies).
 
 Recall that, given the homomorphic signature scheme we're using, it's
 computationally infeasible to compute a signature on a vector though any means
-other than taking linear combinations of existing vectors. Therefore, $f$ must
-have produced $P$ (and the signature) by taking linear combinations of some set
-of $K_2$'s from the current epoch (these are the $K_2$s signed by the current
-key).
+other than taking linear combinations of existing vectors signed by the same
+key. Therefore, $f$ must have produced $K^{(\mathit{target})}_{2} $ and
+$\sigma_k$ by taking linear combinations of some set of $K_2^\tau$'s from the
+current epoch.
 
 Therefore, if $f$ exists, there must exist some function $f^\prime$ that take
 the same parameters as $f$, and, instead of yielding $\sigma_k$ and the
@@ -2756,22 +2920,77 @@ produce $\sigma_k$ and the signature.
 
 So, instead of reducing to $f$, we reduce to $f^\prime$.
 
-Also recall that all $K_2$'s from the current epoch have a $t$ in the exponent.
-This means that $P = (g_2)^{\vec{z}} = (g_2^t)^{\vec{z^\prime}}$ for some
-$\vec{z^\prime}$. This also means that $R = \e(g_1, g_2)^{s \cdot
-  \iprod{(\alpha, \tilde{\alpha})}{\vec{z}}} = \e(g_1, g_2)^{st \cdot
-  \iprod{(\alpha, \tilde{\alpha})}{\vec{z^\prime}}}$.
+Also recall that all $K_2^\tau$'s have a $t$ in the exponent. This means that,
+for some $\vec{z^\prime}$:
+\begin{align*}
+  K_2^{(\mathit{target})} &= (g_2)^{\vec{z}} \\
+                     &= (g_2^t)^{\vec{z^\prime}}
+\end{align*}
+This also means that:
+\begin{align*}
+  R &= \e(g_1, g_2)^{s \cdot \iprod{(\alpha, \tilde{\alpha})}{\vec{z}}} \\
+    &= \e(g_1, g_2)^{st \cdot \iprod{(\alpha, \tilde{\alpha})}{\vec{z^\prime}}}
+\end{align*}
 
-Given that we know the linear combination of $K_2$'s that went into $K^{(2)}_t$
-and we chose all the components in the exponent of these $K_2$s \emph{except}
-for $t$, we can trivially compute $\vec{z^\prime}$. Additionally, we also know
-all the $\alpha$ and $\tilde{\alpha}$ parameters that went into this black box
-so we can brute force $(\alpha, \tilde{\alpha})$ in polynomial time. Therefore,
-we can compute $\iprod{(\alpha, \tilde{\alpha})}{\vec{z^\prime}}$ and remove it
-from the exponent of $R$. This leaves us with $\e(g_1, g_2)^{st}$ which is the
-same thing as $\e(g_1, g_2)^{st}$. However, this violates our original
-assumption so the function $f^\prime$ cannot exist. This, in turn, means that
-$f$ cannot exist.
+Given that we know the linear combination of $K_2^\tau$'s that went into
+$K_2^{(\mathit{target})}$ and we chose all the components in the exponent of
+these $K_2^\tau$'s \emph{except} for $t$, we can trivially compute
+$\vec{z^\prime}$. Additionally, we also know all the $\alpha$ and
+$\tilde{\alpha}$ parameters that went into this black box so we can brute force
+$(\alpha, \tilde{\alpha})$ in polynomial time. Therefore, we can compute
+$\iprod{(\alpha, \tilde{\alpha})}{\vec{z^\prime}}$ and remove it from the
+exponent of $R$. This leaves us with $\e(g_1, g_2)^{st}$ which is the same thing
+as $\e(g_1, g_2)^{st}$. However, this violates our original assumption so the
+function $f^\prime$ cannot exist. This, in turn, means that $f$ cannot exist.
+
+{\hfill $\square$}
+
+\section{Inner-Product Encryption Modification Proof}
+\label{proof:signature-modification}
+
+Our modification to the inner-product encryption (\cite{inner-product})
+construction does not affect its security/privacy guarantees.
+
+Recall that, unlike \cite{inner-product}, we scale the $\vec{b^*}_{2n+1}$ and
+$\vec{b^*}_{2n+3}$ vectors in $\ein_1(\Ap, \vec{x})$ by random independent $r_1$
+and $r_2$ factors chosen fresh for each encryption of $\vec{x}$.
+
+This does not affect correctness because these vectors drop out in the inner
+product.
+
+This does not affect the security of the inner-product encryption scheme because
+an attacker could do the same thing after we construct the ciphertexts and keys
+($C_1$, $C_2$, $K_1$, $K_2$). Specifically, given two $C_1$'s ($v_0$,
+$v_0^\prime$) that encode zero vectors (constructed as described in
+\cite{inner-product}) and an arbitrary number of $C_1$'s ($v_t$) where we want
+to randomize $\vec{b^*}_{2n+1}$ and $\vec{b^*}_{2n+3}$, we can:
+
+\begin{enumerate}
+\item Take a linear combination of $l$ $v_0$'s and $m$ $v_0^\prime$'s to get
+  (all the other $b^*$'s drop out because our vector is zero):
+  \begin{align*}
+    v_0^{(r)} &= g_1^{(l\alpha_0 + m\alpha_0^\prime) \vec{b^*}_{2n+1} + (l\tilde{\alpha_0} + m\tilde{\alpha}_0^\prime)\vec{b^*}_{2n+3}}
+  \end{align*}
+\item ``add'' this $v_0^{(r)}$ to the target vector ($v_t$) and observe
+  that $r_1$ and $r_2$ are completely random.
+  \begin{align*}
+    v_t^{(r)} &= g_1^{\alpha_t(\sum_{x_i \in \vec{x}}{x_i\vec{b^*}_i} +
+      (\alpha_t)^{-1}(l\alpha_0 + m\alpha_0^\prime) \vec{b^*}_{2n+1}) +
+      \tilde{\alpha}_t(\sum_{x_i \in \vec{x}}{x_i\vec{b^*}_{n+i}} +
+      (\tilde{\alpha}_t)^{-1}(l\tilde{\alpha}_0 +
+      m\tilde{\alpha}_0^\prime)\vec{b^*}_{2n+3})} \\
+              &= g_1^{\alpha_t(\sum_{x_i \in \vec{x}}{x_i\vec{b^*}_i} +
+      r_1 \vec{b^*}_{2n+1}) +
+      \tilde{\alpha}_t(\sum_{x_i \in \vec{x}}{x_i\vec{b^*}_{n+i}} +
+      r_2 \vec{b^*}_{2n+3})} \\
+    r_1 &=  (\alpha_t)^{-1}(l\alpha_0 + m\alpha_0^\prime) \\
+    r_2 &=  (\tilde{\alpha}_t)^{-1}(l\tilde{\alpha}_0 + m\tilde{\alpha}_0^\prime) \\
+  \end{align*}
+\end{enumerate}
+
+As we were able to add these random factors after the fact, it can't possibly
+affect privacy (except that an attacker learns two encryptions of the zero
+vector).
 
 {\hfill $\square$}
 
@@ -2936,7 +3155,7 @@ indirection so that the actual underlying public key can change.
     \begin{compactdesc}
     \item[\texttt{dns}] A domain name. An associated public key would be the full
       certificate chain (X.509) signed by a trusted root CA.
-    \item[\texttt{pgp}] A PGP key fingerprint. TODO: Subkeys, key transitions...
+    \item[\texttt{pgp}] A PGP key fingerprint.
     \item[\texttt{rsa}] A DER encoded RSA public key.
     \end{compactdesc}
   \item[\texttt{name}] \texttt{bytes}

@@ -66,6 +66,7 @@
 \DeclareMathOperator{\hmac}{\mathtt{HMAC}}
 
 \DeclareMathOperator{\vh}{\mathtt{VerifyHSig}}
+\DeclareMathOperator{\PreVerify}{\mathtt{PreVerify}}
 \DeclareMathOperator{\Hsig}{\mathtt{HSig}}
 \DeclareMathOperator{\mHsig}{\mathtt{HSign}}
 \DeclareMathOperator{\Vvec}{\mathtt{Verifier}}
@@ -150,8 +151,6 @@
 
 \cleardoublepage
 
-\thispagestyle{empty}
-
 \begin{singlespacing}
 
 \begin{center}
@@ -189,16 +188,16 @@
 
 
 \begin{abstract}
-  DRACL is a \emph{privacy-preserving}, scalable, secure, and developer and user
+  DRACL is a privacy-preserving, scalable, secure, and developer and user
   friendly federated access control system. It allows producers to manage,
   through a single authentication provider, which consumers can access what
   content across all content hosts that support the DRACL protocol. It preserves
   user privacy by not revealing the producers' social networks to content hosts
-  and allowing content consumers to access content anonymously. Unlike existing
-  solutions, DRACL is federated (cf. Facebook Connect, Google Sign-In), does not
-  have a single point of failure (cf. Mozilla Persona, OpenID), and does not
-  reveal its producers' social networks to content hosts (cf. Facebook
-  Connect's~ \verb=user_friends= permission).
+  and consumers and allowing content consumers to access content anonymously.
+  Unlike existing solutions, DRACL is federated (cf. Facebook Connect, Google
+  Sign-In), does not have a single point of failure (cf. Mozilla Persona,
+  OpenID), and does not reveal its producers' social networks to content hosts
+  (cf. Facebook Connect's~ \verb=user_friends= permission).
 \end{abstract}
 
 \end{singlespacing}
@@ -241,10 +240,10 @@ accounts on every content host used by their friends. This is a usability
 problem because it forces users to manage multiple accounts and a privacy
 problem because content hosts often require that account holders sign up with
 their ``real'' names. Additionally, producers need to recreate their social
-networks on every content host. This is also usability problem because it forces
-producers to manage their ``friends list'' in multiple locations and is also a
-privacy problem because it forces producers to share their ``friends list'' with
-multiple services.
+networks on every content host. This is also a usability problem because it
+forces producers to manage their ``friends list'' in multiple locations and is
+also a privacy problem because it forces producers to expose their ``friends
+list'' to multiple services.
 
 In this thesis, we propose a privacy-preserving, scalable, secure, user and
 developer friendly web-wide federated access control scheme that solves a
@@ -272,9 +271,9 @@ It should be user friendly. People shouldn't have to manage multiple accounts or
 manually re-create their social network on every service they use.
 
 It should be free and fluid. People should be able to choose what services they
-use, where they host their content, and how they communicate. They should be
-able to move from service to service and even communicate across multiple
-services without fragmenting their social networks.
+use, where they host content, and how they communicate. They should be able to
+move from service to service and even communicate across multiple services
+without fragmenting their social networks.
 
 It shouldn't require users to sacrifice their privacy in order to participate.
 People should be able to access content shared with them without being forced to
@@ -301,8 +300,8 @@ services they may not like simply because that's where their friends are.
 
 It impossible to socialize with friends and family online without sacrificing
 privacy. For example, Facebook requires anyone wanting to simply access content
-to have an account and requires that all account holders sign up with their real
-name. On a web without walls, people should be able to access content shared
+to have an account and requires that all account holders sign up with their ``real
+name''. On a web without walls, people should be able to access content shared
 with them on, e.g., Facebook without ever signing up or telling Facebook
 anything about themselves.
 
@@ -404,8 +403,8 @@ web from scratch.
 We assume that the web will eventually standardize on a single identity
 management system. We've designed our access control system to work on top of
 any identity system as long as this identity system is able to map identities to
-cryptographic keys. Keybase has demonstrated that pretty much all identity
-systems can do this in some form or another through the use of special
+asymmetric cryptographic keys. Keybase has demonstrated that pretty much all
+identity systems can do this in some form or another through the use of special
 cryptographic proofs.
 
 We also assume that the web will eventually standardize around some reasonably
@@ -440,15 +439,15 @@ some critical terminology used in this document.
       behalf of producers while they're offline and can help ensure that a
       compromise of a producer's account is recoverable. We assume that the AP
       isn't actively malicious but can be compromised and may be nosy.
-    \item[Content Host] A website/service using this system to authenticate
-      content it hosts. For example, Flicker, Facebook, Imgur, etc.
+    \item[Content Host] A website/service using DRACL to authenticate content it
+      hosts. For example, Flicker, Facebook, Imgur, etc.
     \item[Friend] Same as a Facebook friend. That is, the relationship may or
       may not be friendly.
     \item[Honest But Curious Party] An honest but curious party follows
       protocols as specified but attempts to learn information they shouldn't
       know by looking at the protocol's trace. That is, they aren't actively
-      malicious, just nosy. This is the standard cryptographic definition of
-      honest but curious.
+      malicious, just nosy. This is basically the standard cryptographic
+      definition of honest but curious.
     \item[Malicious Party] A malicious party, on the other hand, will deviate
       from the protocol when convenient.
 \end{compactdesc}
@@ -476,13 +475,13 @@ becomes a social problem, not a technical problem.
 
 \subsection{Privacy Preserving}
 
-By privacy preserving we mean that a good access control system should avoid
+By privacy preserving, we mean that a good access control system should avoid
 revealing metadata. That is, it should reveal neither the identities or actions
 of consumers nor the composition of its producers' social networks to any party
 when possible.
 
 First, such a system should not reveal the identities of consumers to content
-hosts because people should not be excluded from social interactions for valuing
+hosts because people shouldn't be excluded from social interactions for valuing
 their privacy. In the web as it exists today, it's impossible to participate in
 social networks without handing out personal information to third parties. This
 forces people to either hand out this information or isolate themselves
@@ -495,27 +494,27 @@ themselves (e.g. by logging in), this should be by choice.
 
 Additionally, such a system should also not reveal the identities of consumers
 to content hosts because it would discourage the sharing and consuming of
-content due to fear of judgment by association. Producers may choose not to
+content due to fear of judgment by association. Producers may choose to not
 share a piece of content with a consumer because they don't want to be
-associated with the consumer. Consumers may choose not to access a piece of
+associated with the consumer. Consumers may choose to not access a piece of
 content because they don't wish to be associated with the producer. In general,
 a good access control system should not influence what people share.
 
-Second, such a system should not reveal the consumer activity to anyone,
-especially producers. If a consumer views a piece of content, the content's
-producer should not be notified in any way without the consumer's explicit
-consent. Otherwise, the consumer loses the freedom to choose to either defer or
-avoid participation in a social interaction. For example, if the fact that a
-consumer has read an invitation were revealed to a producer, the consumer would
-be pressured to out-right reject or accept the invitation instead of simply
-pretending not to have seen it. This would force the consumer to either lie (``I
-have plans''), do something socially unacceptable (reject it), or attend some
-event they don't want to attend (potentially dangerous). Basically, how to
-respond to a piece of content should be up to the consumer. However, we don't
-believe that it's the access control system's job to prevent actively malicious
-producers from subverting the protocol to learn this information. Such behavior
-should be discouraged through social means and such producers are likely to have
-a hard time making friends.
+Second, such a system should not reveal consumer activity to anyone, especially
+producers. If a consumer views a piece of content, the content's producer should
+not be notified in any way without the consumer's explicit consent. Otherwise,
+the consumer loses the freedom to choose to either defer or avoid participation
+in a social interaction. For example, if the fact that a consumer has read an
+invitation were revealed to a producer, the consumer would be pressured to
+out-right reject or accept the invitation instead of simply pretending not to
+have seen it. This would force the consumer to either lie (``I have plans''), do
+something socially unacceptable (reject it), or attend some event they don't
+want to attend (potentially dangerous). Basically, how to respond to a piece of
+content should be up to the consumer. However, we don't believe that it's the
+access control system's job to prevent actively malicious producers from
+subverting the protocol to learn this information. Such behavior should be
+discouraged through social means and such producers are likely to have a hard
+time making friends.
 
 Finally, such a system should not reveal the structure of a producer's social
 network, \emph{especially} to members of their social network, because would
@@ -570,16 +569,16 @@ content-by-content basis which would be extremely tedious. Worse, it's error
 prone so a producer might forget to revoke a malicious consumer's access to some
 piece of content.
 
-Again, this comes back to reducing not limiting social interaction on the web.
-Usability problems in an access control system turn into communication barriers
-because users will choose not socialize in some way something because it's hard.
-Therefore, a good access control system should try to stay out of the user's way
-as much as possible and make socializing online as easy as possible.
+Again, this comes back to not limiting social interaction on the web. Usability
+problems in an access control system turn into communication barriers because
+users will choose not socialize in some way because it's hard. Therefore, a good
+access control system should try to stay out of the user's way as much as
+possible and make socializing online as easy as possible.
 
 \subsection{User Freedom}
 \label{sec:goal-freedom}
 
-By user freedom we mean that, a good access control system should enable users
+By user freedom, we mean that a good access control system should enable users
 to choose which online services they use and should allow them to freely to move
 between them. This is closely related to both privacy and user friendliness as
 it's a prerequisite for both but it bears discussing as a stand-alone category.
@@ -595,9 +594,9 @@ practical competition as it lowers the barrier for bootstrapping new services.
 This is a direct consequence of allowing producers to share content with
 consumers without forcing these consumers to create accounts. Competition is not
 only good for users, it's absolutely necessary to keep companies from taking
-advantage their users over in pursuit of higher profit margins. See
-AT\&T\cite{att} policy and Comcast's\cite{comcast} recent attempt to charge an
-additional fee for not snooping on their customers browser history.
+advantage of users in pursuit of higher profit margins. See AT\&T's~\cite{att}
+policy and Comcast's~\cite{comcast} recent attempt to charge an additional fee
+for not snooping on their customers browser history.
 
 Finally, a good access control scheme must be decentralized. We have an entire
 section on this later (see \cref{sec:identity-auth}) but the short version is
@@ -609,11 +608,11 @@ authentication system would become the new Facebook.
 \subsection{Secure}
 
 By secure, we mean that only authorized consumers should be able to access
-content, producers should be able to efficiently/reliably revoke access from
-consumers, and compromises should be recoverable.
+content, producers should be able to efficiently and reliably revoke access from
+consumers, and that compromises should be recoverable.
 
 First, only authorized consumers, the content's producer, and the content host
-should be able to access content, no ``trusted'' third parties. Currently, if
+should be able to access content --- no ``trusted'' third parties. Currently, if
 someone were to hack Gmail, they'd be able to access pretty much everything on
 the public internet (through, e.g., password reset emails). This was a mistake.
 Therefore, a good access control system should avoid this problem by design.
@@ -623,7 +622,8 @@ contact every content host in order to remove a consumer from a group. First,
 this would trigger a lot of up-front network traffic, even for old content that
 may never be accessed again. Second, it would violate the fail-safe principle of
 systems design: if a producer were unable to contact some of their content hosts
-for some reason, there would be no way to revoke access.
+for some reason, there would be no way to revoke access (assuming that the
+content host comes back online eventually).
 
 Finally, no compromise of any single party should be unrecoverable and no
 compromise of any single party should bring down the entire system. Websites are
@@ -639,8 +639,8 @@ interactions will still, for the most part, be private and secure.
 
 By developer friendly, we mean that a good universal access control system
 should be at least as easy to deploy as a custom password-based identity scheme
-(the current de facto standard) and it shouldn't require significant infrastructure
-changes.
+--- the current de facto standard --- and it shouldn't require significant
+infrastructure changes.
 
 We believe that a lack of developer friendliness contributed significantly to
 the failure of systems like OpenID\cite{openid}. More concretely, we know that
@@ -713,7 +713,7 @@ users. They're bad for privacy because content hosts learn the identities of who
 has access to what and, by extension, who knows who. While these issues
 sufficiently motivate an alternative design, we have included this section to
 give an overview of some common existing systems and to learn from their
-shortcomings (in addition to the privacy problem).
+shortcomings.
 
 \subsubsection{Site Specific Authentication}
 
@@ -736,7 +736,7 @@ As discussed in the requirements section on user friendliness (\cref{sec:goal-us
 From a user-freedom standpoint, site-specific accounts make it hard to switch
 between services because these service simply don't interoperate. Users can't
 just switch to a new content host because they have to convince their friends to
-create accounts on the new social network before they can make use of it.
+create accounts on the new content host before they can make use of it.
 
 From a developer usability standpoint, site-specific accounts force content
 hosts to implement custom account/access control systems. Again, refer to the
@@ -748,8 +748,8 @@ choosing/remembering safe passwords. For example, content hosts often store user
 credentials in the clear~\cite{plaintext} and users often reuse passwords and/or
 use weak passwords~\cite{ms-passwords}.
 
-To be fare, site-specific accounts have served the web well for a very long
-time. This is primarily because they have no external dependencies and are
+To be fair, site-specific accounts have served the web well for a very long
+time. This is primarily because they have no external dependencies, are
 \emph{really} easy to implement in modern web frameworks, and will continue to
 work years down the road no matter how much the web changes. However, we still
 believe that their many problems warrant a better solution.
@@ -759,12 +759,12 @@ believe that their many problems warrant a better solution.
 Centralized identity-based authentication systems, such as those provided by
 Google and Facebook, allow users to authenticate as an identity to multiple
 sites using a single set of credentials. These systems therefore solve all of
-the security problems we mentioned in the site specific password section as
-users only have one set of credentials managed by a single, hopefully competent,
-entity. They also solve the associated usability problem of users having to
-remember multiple passwords.
+the security problems we mentioned in the site-specific authentication section
+as users only have one set of credentials managed by a single, hopefully
+competent, entity. They also solve the associated usability problem of users
+having to remember multiple passwords.
 
-Some centralized identity-based authentication systems increase usability by
+Some centralized identity-based authentication systems improve usability by
 allowing users to carry their social networks with them to content hosts. For
 example, Facebook Connect allows content hosts to access to users' friends lists
 by requesting the \verb=user_friends=
@@ -835,7 +835,7 @@ user-freedom problem much worse. While content hosts can allow different users
 to authenticate with different centralized authentication services, they cannot
 allow users to choose their own (fully) centralized access control service
 without partitioning the social network because, by definition, centralized
-access control services don't interoperate. Note: if a set of semi-centralized
+access control services don't interoperate. Note: If a set of semi-centralized
 access control systems were built on top of some decentralized authentication
 system, they could interoperate to an extent but (1) no such system exists and
 (2) this system would still be limited to blessed parties.
@@ -868,11 +868,11 @@ anonymity nor do they try to fully hide the producer's social network from
 consumers. Furthermore, UMA and DRBAC both require their users to completely
 trust some AP with access to all their content; if the AP is snoopy, it could
 access all it's user's content. Worse, compromising an insecure AP would
-compromise the system. On the other hand, RBACSN doesn't allow restricting
-access to groups or individual consumers; that is, it allows producers to share
-content based on their relationship with consumers (direct friend,
-friend-of-a-friend) etc. but doesn't support simply creating groups of friends
-and sharing content that group of friends.
+compromise the entire system. On the other hand, RBACSN doesn't allow
+restricting access to groups or individual consumers; that is, it allows
+producers to share content based on their relationship with consumers (direct
+friend, friend-of-a-friend) etc.\@ but doesn't support simply creating groups of
+friends and sharing content that group of friends.
 
 Now we're in uncharted territory. So far, we've decided that we need an access
 control system, not just an authentication system, and would like it to be
@@ -883,16 +883,16 @@ space and work our way towards a design that satisfies our requirements.
 \label{sec:design}
 
 Now that we've determined that we need a decentralized access control protocol,
-this section explores the design space and works towards the final design of
-DRACL. If you just want to know how DRACL works but not why or how we got there,
-proceed to the System Overview (\cref{chap:system-overview}) for a
-top-down view of the DRACL protocol.
+we explore the design space and work towards the final design of DRACL. If you
+just want to know how DRACL works but not why or how we got there, proceed to
+the System Overview (\cref{chap:system-overview}) for a top-down view of the
+DRACL protocol.
 
 \note{The straw men presented here are not complete solutions. We highlight the
   problems we feel are important enough to motivate moving to a new solution but
   gloss over many \textbf{dangerous} security flaws. Please \textbf{do not}
   attempt to implement any of the straw men presented in this section without
-  serious analysis, even if you don't care about our stated reasons for not using
+  serious analysis even if you don't care about our stated reasons for not using
   them.}
 
 \subsection{False Starts}
@@ -905,7 +905,7 @@ to rule out some design directions.
 Before going into real access control systems, we need to talk about bearer
 credentials. You've almost definitely run across them, usually in the form of
 ``secret'' links. That is, if you know (are a bearer of) the link, you can
-access the resource hence the.
+access the resource.
 
 So, we could just give everyone secret links to the content they can access.
 Unfortunately, this really just side-steps the problem. We'd still need a system
@@ -924,7 +924,7 @@ and managing Macaroons.
 
 In short, bearer credentials are a useful component of access control systems
 but don't really solve the problem. As a matter of fact, DRACL ends up using a
-form of bearer credentials internally (we call them ACL keys but more on that
+form of bearer credentials internally (we call them ACL Keys but more on that
 later).
 
 \subsubsection{Encrypt All The Things}
@@ -936,7 +936,7 @@ This has \emph{perfect} privacy. Nobody has to authenticate to anyone and no
 metadata is leaked --- other than, potentially, some information about how many
 consumers can access a piece of content (because most crypto systems leak the
 cardinality of the set of keys that can decrypt something). Basically, producers
-just encrypt the content using all recipients public keys (using some form of
+just encrypt the content using all recipients' public keys (using some form of
 key-private encryption) and upload it anonymously to a content host. Consumers
 download it and try decrypting it.
 
@@ -945,27 +945,27 @@ a PKI. If a producer knows a consumer's public key, they can grant them access
 to a piece of content.
 
 However, this would basically require reworking the entire web. Content hosts
-want to be able to integrate with the content they serve, if it's encrypted,
+want to be able to integrate with the content they serve. If it's encrypted,
 they basically become file sharing services.
 
 Additionally, this only supports static content out of the box. It's possible to
-build applications that operate on encrypted data sets but it's really hard.
+build applications that operate on encrypted data-sets but it's really hard.
 Again, this just won't work with the web as it is.
 
 Finally, there's no ability to recover from compromise. Attackers \emph{will}
 (e.g., the NSA) download all the encrypted content on the web and wait for an
 associated key to be compromised. An access control system should require a
-consumer to authorize \emph{before} they can get their hands on any form of the
-content.
+consumer to authenticate \emph{before} they can get their hands on any form of
+the content.
 
 Just encrypting everything is appealing from a simplicity and privacy
-perspective but it's simply not practical. Note: this doesn't mean that users
+perspective but it's simply not practical. Note: This doesn't mean that users
 shouldn't encrypt their social interactions when possible, it just means that
 encryption is not sufficient.
 
 \subsection{Zeroth Attempt}
 
-A naive solution is to have content hosts ask producers directly if consumer
+A naive solution is to have content hosts ask producers directly if a consumer
 should be able to access some content. This obviously won't work because we
 can't expect the producer's computer to be online all the time. As a matter of
 fact, for all we know, the producer may never come back online --- they could be
@@ -989,7 +989,7 @@ producers would also assign a content ID (CID) to the content in question and
 tell the content host: when a consumer tries to access the content identified by
 CID, ask AP if they should be granted access. The user would then tell their AP
 which consumers and/or groups of consumers should be granted access to the
-content identified by CID.
+content identified by a CID.
 
 On the plus side, this is an extremely simple system and meets many of our
 requirements. From a privacy standpoint, neither consumers nor content hosts learn
@@ -998,7 +998,7 @@ revealed only to the producer's AP, not the producer. From a security standpoint
 access can be revoked without contacting individual content hosts and compromise
 is all recoverable as nobody stores any security-sensitive state. From a
 developer friendliness standpoint, this system is great because it's simple.
-Unfortunately, this has has a some major drawbacks.
+Unfortunately, it still has has a some major drawbacks.
 
 \subsection{Don't Be A Weapon}
 
@@ -1073,11 +1073,11 @@ As traditional cryptography doesn't appear to be enough, we turn to functional
 cryptography. Using functional cryptography, producers can give their APs
 virtual black boxes that, given user ID and a specially constructed ACL, can
 construct a certificate usable only by the given consumer --- using some
-consumer-specific secret --- if, and only if, they a member of the ACL. We'll
-call this black box the certificate granting box (CGBB). Unfortunately, this
-isn't without drawbacks: this crypto is \emph{very} computationally expensive
---- on the order of a second of CPU time. This violates our requirement of not
-not performing expensive computation on third party servers.
+consumer-specific secret --- if, and only if, they are a member of the ACL.
+We'll call this black box the certificate granting box (CGBB). Unfortunately,
+this isn't without drawbacks: this crypto is \emph{very} computationally
+expensive --- on the order of a second of CPU time. This violates our
+requirement of not not performing expensive computation on third party servers.
 
 \subsection{Distribute The Load}
 
@@ -1108,15 +1108,14 @@ of giving the CGBB to the AP, we give the AP a CGBB factory that can make
 time-limited CGBBs. This way, even if the producer dies, the AP can continue
 producing these CGBBs in perpetuity. Fortunately, the crypto behind the CGBB
 factory is significantly less computationally expensive than the crypto behind
-using a CGBB itself. Unfortunately, the CGBBs produced by this factory are 2x
-slower.
+using a CGBB itself.
 
 This solution is far from perfect. Now that we are relying on timeouts,
 consumers will be able to continue to access content after they have been remove
 from the group until their CGBBs expire. This problem isn't related to the
 specific crypto we are using, it's just an inherent problem in taking the AP out
-of the loop. We can, and do, improve this situation slightly but you can read
-about that in \cref{chap:system-overview}.
+of the loop. We can, and do, improve this situation slightly in
+\cref{chap:system-overview}.
 
 \subsection{No Unrecoverable Compromises}
 
@@ -1192,9 +1191,9 @@ Because all parties in DRACL make extensive use of cryptography, we need a way
 to handle the compromise of cryptographic secrets (keys). To do so, we have the
 AP certify all public keys in the system with short-lived certificates. If a
 user believes their keys to be compromised, they can revoke their keys by asking
-their AP to stop signing their keys. We also provide a protocol for securely
-transitioning to a new key --- authenticating the new key out of band --- and
-restoring access.
+their AP to stop signing their keys. We also allow users to re-activate their
+accounts assuming that the underlying identity system provides a way to migrate
+from one identity to another.
 
 \section{Keys}
 \label{sec:keys}
@@ -1925,7 +1924,7 @@ APs have storage and computation loads proportional to the number of
 consumer-producer relationships, not proportional to the amount of content
 published by a producer. Therefore, the cost of running a DRACL AP should scale
 approximately proportionally to the number of users of the service. This means
-that, a steady state, the cost of running an AP should actually decrease over
+that, in a steady state, the cost of running an AP should actually decrease over
 time as storage, bandwidth, and CPU power become cheaper.
 
 DRACL is decentralized. This give instant scalability as the number of APs can
@@ -1933,13 +1932,13 @@ scale with demand.
 
 However, it is unfortunate that APs need to do some crypto in real time when
 consumers fetch their ACL keys. Currently, APs need to do some crypto when
-handing out ACL Keys to consumers in order to verify that the consumer identity
-key hasn't been revoked. However, we could do all the crypto offline
+handing out ACL Keys to consumers in order to verify that the consumer's
+identity key hasn't been revoked. However, we could do all the crypto offline
 ahead-of-time using some fancier crypto schemes. Unfortunately, this gets a bit
 complicated and may not be worth doing in practice. Regardless, this is worth
 exploring as it would allow the AP to choose when and where to perform
-moderately expensive computations which could significantly reduce the cost of
-running an AP when compared to performing these computations on-demand.
+moderately expensive calculations which could significantly reduce the cost of
+running an AP when compared to performing these calculations on-demand.
 
 \section{Future Work}
 
@@ -1988,7 +1987,7 @@ Here, we list them off for easy picking.
 
 \newcommand{\Vv}{\Vvec(\mathbb{A})}
 \newcommand{\Cv}{\Cvec(s_1, \mathbb{B})}
-\newcommand{\mCv}{\mCvec(s_1, \mathbb{B})}
+\newcommand{\mCv}{\mCvec(s_1, \Pv)}
 \newcommand{\Pv}{\PvecP(\mathbb{B})}
 \newcommand{\Sv}{\PvecS(\mathbb{B})}
 \newcommand{\Pvg}{\PvecG(\mathbb{B})}
@@ -2026,14 +2025,15 @@ An admin (in our case the producer) can generate special encrypted verifier sets
 ($\Vv$) and encrypted prover set key-pairs ($\Pv$, $\Sv$). Someone with one of
 these verifier sets can generate encrypted challenge sets ($\Cv$ where $s$ is a
 secret). Someone else with a prover set can prove that their prover set
-intersects with a given challenge set. We use this to allow consumers --- with
-prover sets that describe the groups that they are in --- to prove to content
-hosts --- with challenge sets that describe the groups that are in the ACL ---
-that the consumer is in some group listed in the ACL. All of these functions
-take an implied parameter $p$ that describes the producer's environment (i.e.,
-their secret keys).
+intersects with a given challenge set by producing $\Proof(\Cv, \allowbreak\Pv)$
+without knowing $s$. We use this to allow consumers --- with prover sets that
+describe the groups that they are in --- to prove to content hosts --- with
+challenge sets that describe the groups that are in the ACL --- that the
+consumer is in some group listed in the ACL. All of these functions take an
+implied parameter $p$ that describes the producer's environment (i.e., their
+secret keys).
 
-Note: crucially, all these sets are encrypted and hidden from all parties except
+Note: Crucially, all these sets are encrypted and hidden from all parties except
 the admin (producer).
 
 \section{Protocol}
@@ -2062,8 +2062,8 @@ hasn't been tampered with.
 \subsubsection{ACL Key}
 \label{sec:proto-acl-key}
 
-Every consumer's ACL Private Key includes a $\Pv$ and their ACL Public Key
-includes a $\Sv$ where $\mathbb{B}$ encodes the groups in which the consumer is
+Every consumer's ACL Private Key includes a $\Sv$ and their ACL Public Key
+includes a $\Pv$ where $\mathbb{B}$ encodes the groups in which the consumer is
 a member. Additionally, the consumer has two certificates --- one from the
 producer and one from the AP --- on $\Pv$ that certify the time period for which
 it is valid.
@@ -2076,7 +2076,10 @@ it is valid.
 Abstractly, the protocol is simple: the content host chooses a secret scalar
 $s$, gives the consumer some encrypted form of $s$, and then gets back some form
 of $s$ that the consumer wouldn't have been able to compute if the intersection
-of $\mathbb{a}$ and $\mathbb{b}$ were zero.
+of $\mathbb{A}$ and $\mathbb{B}$ were zero.
+
+The numbers in this section refer to steps in the authentication protocol
+(\cref{fig:auth2}).
 
 \subsubsection{Attempt Access}
 \label{sec:proto-attempt-access}
@@ -2131,10 +2134,10 @@ The content host then sends $\Cv$ and $E$ to the consumer (7).
 
 \subsubsection{Proving Access}
 
-The consumer computes the proof from $\Cv$ and $\Sv$:
+The consumer computes the proof from $\Cv$, $\Sv$, and $\Vv$:
 \begin{align*}
   P &= \Proof(\Cv, \Pv) \\
-    &= \mProof(\Cv, \Sv)
+    &= \mProof(\Vv, \Cv, \Sv)
 \end{align*}
 They then hash it to recover $T$, and then decrypt $E$ to recover $(s_1, s_2)$.
 
@@ -2165,13 +2168,13 @@ spits out a randomized $\Pv$ and $\Sv$.
 
 Unfortunately, this means that we can't certify $\Pv$ directly using standard
 asymmetric cryptography because it's generated by the consumer. To fix this, we
-use a special homomorphic signature scheme to sign $\Pvg$ that can tolerate this
+use a special malleable signature scheme to sign $\Pvg$ that can tolerate this
 re-randomization and put the public key of this scheme in the certificate.
 
 We'll define $\HsigG(\Hp, G)$ to be a re-randomizable signature on a the
 $\PvecG$ $G$ belonging to some key $\Hp$. We also modify $\rand$ to accept a set
 of $\HsigG(G)$'s and spit out a matching set of $\Hsig(\Pv)$'s. That is, given
-$G =\Pvg$: \vspace{-2em}
+$G =\Pvg$: \vspace{-3em}
 \begin{singlespace}
 \begin{align*}
   ( \\
@@ -2195,14 +2198,14 @@ Concretely, we make the following modifications.
 We now give the consumer $G = \Pvg$ in the setup phase
 (\cref{sec:proto-acl-key}) instead of directly giving them $\Pv$ and $\Sv$.
 Additionally, instead of directly certifying $\Pv$, both the content host and
-the AP create their own homomorphic keypairs (consistent between all consumers),
-sign $G$ with these key-pairs ($\gamma_p = \Hsig(\Hp_p, G)$), and then certify
+the AP create their own malleable keypairs (consistent between all consumers),
+sign $G$ with these key-pairs ($\gamma_p = \HsigG(\Hp_p, G)$), and then certify
 the key-pairs themselves.
 
 \subsubsection{Generate Setup Material}
 
 In the Generate Setup Material (\cref{sec:proto-setup-material}) phase, we have
-the consumer generate fresh a fresh $\Pv$, $\Sv$ and homomorphic signatures:
+the consumer generate fresh a fresh $\Pv$, $\Sv$ and malleable signatures:
 \vspace{-3em}
 \begin{singlespace}
 \begin{align*}
@@ -2225,14 +2228,14 @@ certificate on $\Hp_p$ for both the producer's AP and the producer.
 In the previous chapter, we assumed that there was some way for consumers to
 prove that their $\Sv$ intersects with the ACL's $\Vv$. In this chapter, we
 explain how we actually do this. However, we first re-describe the entire
-protocol from scratch from a a crypto perspective as opposed to a systems
+protocol from scratch from a crypto perspective as opposed to a systems
 security perspective as we did above. This allows us to separate systems
 security concerns from cryptographic concerns and makes it easier to understand
 the crypto.
 
 To reiterate the problem, we needed a way for consumers to prove that the set of
-groups in which they are a member intersects the set of groups that listed in an
-ACL. There are three requirements that make this difficult:
+groups in which they are a member intersects the set of groups listed in an ACL.
+There are three requirements that make this difficult:
 
 \begin{enumerate}
 \item These sets must remain secret from both parties. That is, we allow neither
@@ -2256,10 +2259,10 @@ To solve any problem with crypto, it must first be reduced to concrete math
 but we don't have that). So, first, we need a way to encode our sets of groups.
 We do so by turning them into bit-vectors (1 for present, 0 for not present).
 Now the set-intersection problem becomes an inner-product problem and the
-consumer needs to prove that their encrypted bit-vector $\vec{b}$ intersects
-with the ACL's encrypted bit-vector $\vec{a}$. The tricky part is not revealing
-the bit-vectors (to either the consumer or content host) and ensuring that
-consumers can't use expired vectors.
+consumer needs to prove that their encrypted bit-vector $\vec{b}$ has a non-zero
+inner product with the ACL's encrypted bit-vector $\vec{a}$. The tricky part is
+not revealing the bit-vectors (to either the consumer or content host) and
+ensuring that consumers can't use expired vectors.
 
 To hide the vectors, DRACL uses a function-hiding inner product encryption
 scheme described by Bishop, Jain and Kowalczyk \cite{inner-product} along with
@@ -2298,22 +2301,23 @@ $\eins$, $\ein$, and $\eouts$ all have the following properties:
 \begin{enumerate}
 \item The first argument is homomorphic over linear combinations. That is, given
   one of the above functions $f$, there is a function $\combine$ that can
-  produce $f(x\cdot \Ap + y\cdot Bp, \ldots) = \combine(x, y, f(\Ap,
+  produce $f(x\cdot \Ap + y\cdot \Bp, \ldots) = \combine(x, y, f(\Ap,
   \ldots),f(\Bp, \ldots))$ assuming the remaining arguments
   ($\ldots$) are identical.
 \item The vectors passed into $\ein$ are ``hidden''. That is, given
   $\ein_1(\ldots, \vec{a})$ and $\ein_2(\ldots, \vec{b})$, it's possible to
   learn the inner product of these two vectors but nothing more. This was proven
   in \cite{inner-product} and \cite{inner-product-ext}.
-\item \sloppy Given $\ein_1(s \cdot \Ap, \vec{a})$, $\ein_2(\Bp, \vec{b})$,
-  $\eins_1(\Ap)$, and $\eins_2(\Bp)$, it's hard to compute $\eouts(s\cdot\ABp)$
+\item \sloppy Given $\ein_1({s\cdot\Ap},~\vec{a})$, $\ein_2(\Bp,~\vec{b})$,
+  $\eins_1(\Ap)$, and $\eins_2(\Bp)$, it's hard to compute $\eouts({s\cdot\ABp})$
   unless $\iprod{\vec{a}}{\vec{b}}$ is non-zero. We prove this in
   \cref{sec:crypto-sec}.
 \end{enumerate}
 
-Now that we've abstracted away some of the underlying crypto, we can define the
-functions used in \cref{sec:proto-detail} in terms of these abstractions. After
-that, we'll peel back the abstraction and reduce everything to math.
+Now that we've abstracted away some of the underlying crypto, we can our
+protocol in terms of these abstractions. After that, we'll peel back the
+abstraction and reduce everything to math. Finally, we'll explicate define the
+functions used in \cref{chap:auth} in terms of the underlying crypto.
 
 \section{Authentication Protocol}
 
@@ -2332,12 +2336,13 @@ encryption of $\vec{a}$ --- and $C_2 = \eins_1(\Ap)$.\footnote{$(C_1, C_2)$ was
   $\Vv$ in \cref{chap:auth}}
 
 In the consumer's ACL Key, the producer includes $K_1 = \ein_2(\Bp,
-\vec{b})$\footnote{$\Sv$ in \cref{chap:auth}} --- an encryption of $\vec{b}$ ---
-as the ACL Private Key and $K_2 = \eins_2(\Bp)$\footnote{$\Pv$ in
+\vec{b})$~\footnote{$\Sv$ in \cref{chap:auth}} --- an encryption of $\vec{b}$ ---
+as the ACL Private Key and $K_2 = \eins_2(\Bp)$~\footnote{$\Pv$ in
   \cref{chap:auth}} as the ACL Public Key. Additionally, we include a certificate
   on $K_2$ certifying it as valid for some period of time.
 
 \subsection{Protocol}
+\label{sec:auth-crypto-proto}
 
 When authenticating a consumer, the content host first sends the consumer the
 ACL ($C_1$, $C_2$). They (the consumer) then computes:
@@ -2350,7 +2355,7 @@ ACL ($C_1$, $C_2$). They (the consumer) then computes:
 \end{align*}
 
 If $\eouts(c \cdot \ABp)$ is $1$, authentication has failed and the consumer
-abort. this is the pre-verification step).
+abort. This is the pre-verification step.
 
 Next, the consumer sends their ACL Public Key to the content host ($K_2$ and the
 certificate on $K_2$) to the content host (not randomized but we'll get to that
@@ -2365,8 +2370,8 @@ The content host then computes:
 \end{align*}
 
 
-They send $C^s$\footnote{$\Cv$ in \cref{chap:auth}} to the consumer and record
-$R$\footnote{$\Proof(\Cv, \Pv)$ in \cref{chap:auth}}.
+They send $C^s$~\footnote{$\Cv$ in \cref{chap:auth}} to the consumer and record
+$R$~\footnote{$\Proof(\Cv, \Pv)$ in \cref{chap:auth}}.
 
 The consumer then computes:
 \begin{align*}
@@ -2384,10 +2389,10 @@ until they find a $\stackrel{\text{\tiny?}}{c}$ that works:
   \combine(\stackrel{\text{\tiny ?}}{c}, 0, \eouts(\ABp), \eouts(\ABp)) \stackrel{?}{=} \eouts(c\cdot\ABp)
 \end{align*}
 
-They then use this $c$ and (3) to compute $\eouts(s\cdot\ABp)$\footnote{$\Proof(\Cv,
+They then use this $c$ and (3) to compute $\eouts(s\cdot\ABp)$~\footnote{$\Proof(\Cv,
 \Pv)$ in \cref{chap:auth}} and prove to the content host that they know this
 value. Given propriety 3 from \cref{sec:reduce-to-math}, this would have been
-hard if the two vectors had a non-zero inner product.
+hard if the two vectors had a zero inner product.
 
 Unfortunately, the protocol as describe so far doesn't meet our anonymity
 requirement. $\Bp$ and, in-turn, $K_2$ uniquely identify the consumer.
@@ -2416,7 +2421,7 @@ And use $K_1^r$ and $K_2^r$ instead of $K_1$ and $K_2$.
 
 Unfortunately, now that we're allowing the user to take linear combinations of
 their keys, we can't just sign $K_2$ (because the consumer never gives $K_2$ to
-the content host). Instead we need a homomorphic signature scheme that allows
+the content host). Instead we need a malleable signature scheme that allows
 consumers to take linear combinations of (the parameters of) $K_2$ while
 preserving the signature.
 
@@ -2494,8 +2499,8 @@ through.
 \begin{figure}[H]
 \label{fig:abstraction}
 \begin{align*}
-  \eins_1(\Ap) &= g_1^{\alpha_1\vec{d^*}_1 + \alpha_2\vec{d^*}_2} && \text{; In \cite{inner-product}, $\alpha_1 = \alpha$ and $\alpha_2 = \tilde{\alpha}$.} \\
-  \eins_2(\Bp) &= g_2^{\beta_1\vec{d}_1 + \beta_2\vec{d}_2} && \text{; In \cite{inner-product}, $\beta_1 = \beta$ and $\beta_2 = \tilde{\beta}$.} \\
+  \eins_1(\Ap) &= g_1^{\alpha_1\vec{d^*}_1 + \alpha_2\vec{d^*}_2} ~~\text{// In \cite{inner-product}, $\alpha_1 = \alpha$ and $\alpha_2 = \tilde{\alpha}$.} \\
+  \eins_2(\Bp) &= g_2^{\beta_1\vec{d}_1 + \beta_2\vec{d}_2} ~~~~\text{// In \cite{inner-product}, $\beta_1 = \beta$ and $\beta_2 = \tilde{\beta}$.} \\
   \ein_1(\Ap, \vec{x}) &= g_1^{\alpha_1\left(\sum_{x_i \in \vec{x}}{x_i\vec{b^*}_i} + r_1\vec{b^*}_{2n+1}\right) + \alpha_2\left(\sum_{x_i \in \vec{x}}{x_i\vec{b^*}_{n+i}} + r_2\vec{b^*}_{2n+3}\right)} \\
   \ein_2(\Bp, \vec{x}) &= g_2^{\beta_1\left(\sum_{x_i \in \vec{x}}{x_i\vec{b}_i} + \vec{b}_{2n+2}\right) + \beta_2\left(\sum_{x_i \in \vec{x}}{x_i\vec{b}_{n+i}} + \vec{b}_{2n+4}\right)} \\
   \pair(a, b) &= \e(a, b) \\
@@ -2505,24 +2510,29 @@ through.
 \caption{Cryptographic Abstraction}
 \end{figure}
 
-\section{The Homomorphic Signature Scheme}
+\section{Malleable Signature Scheme}
 \label{sec:homo-sig}
 
 Now that we've mapped our crypto onto well-known cryptographic primitives (i.e.
-cryptographic pairing), we can explain the homomorphic signature scheme.
+cryptographic pairing), we can explain the malleable signature scheme.
 Specifically, we need to sign a set of $K_2 = \eins_2(\Bp) =
 g_2^{\beta_1\vec{d}_1 + \beta_2\vec{d}_2}$ such that the signature is preserved
 under linear combination.
 
-To do this, we note that $K_2$ is of the form $(g_2^x, g_2^y)$ for some $x$
-and $y$. Given two $K_2$'s, we want the signature to be preserved under linear
-combination. That is, $(g_2^{ax_1 + bx_2}, g_2^{ay_1 + by_2})$ for some $a$ and $b$.
+To do this, we note that $K_2$ is of the form $(g_2^{x_1}, g_2^{x_2})$ for some
+$x_1$ and $x_2$. Given two $K_2$'s, we want the signature to be preserved under
+linear combination. That is, $(g_2^{a x_1 + b x_1^\prime}, g_2^{a x_2 + b
+  x_2^\prime})$ for some $a$ and $b$.
 
 For our signature scheme, we have the producer pick some $o_1$ and $o_2$,
-release $P = (g_1^{o_1}, g_1^{o_2})$ as a public key. The signature on $K_2$ is then
-$\sigma = g_2^{x\cdot o_1 + y\cdot o_2}$. To verify the signature, the content host
-verifies that $\e(g_1, \sigma) = \e(g_1^{o_1}, g_2^x) \cdot \e(g_1^{o_2},
-g_2^y)$. This is loosely based on \cite{signature}.
+release $P = (g_1^{o_1}, g_1^{o_2})$ as a public key. The signature on $K_2$ is
+then $\sigma = (g_2^{x_1\cdot o_1}, g_2^{x_2\cdot o_2})$. To verify the
+signature, the content host verifies that $\e(g_1, \sigma_i) = \e(g_1^{o_i},
+g_2^{x_i})~ \forall i$. This is loosely based on \cite{signature}. Note, we keep
+the signatures on the individual elements separate (unlike in \cite{signature})
+because we have slightly different requirements (and we needed to do so to make
+the proof go through). In future work, we hope to follow \cite{signature} more
+closely.
 
 Finally, when creating the certificate validating the ACL Key for a time period,
 the producer/AP certify $P$, not $K_2$ directly.
@@ -2530,10 +2540,102 @@ the producer/AP certify $P$, not $K_2$ directly.
 \section{Putting It Together}
 
 Finally, we can tie these two chapters together by explicitly defining the
-functions used in \cref{chap:auth} with those defined here.
+functions used in \cref{chap:auth} with those defined here. This section is
+mostly for implementors.
 
-TODO (Just map the functions together. Mindless bleh...
+\subsection{Signature Scheme}
 
+\begin{description}
+  \item[Private Key] $\Hs = (o_1, o_2)$ (randomly generate)
+  \item[Public Key] $\Hp = (g_1^{o_1}, g_1^{o_2})$
+  \item[Signing] \hfill \\
+    Given $(g_2^{x_1}, g_2^{x_2})$, produce a signature $(\sigma_1, \sigma_2) = (g_2^{x_1\cdot o_1}, g_2^{x_2\cdot o_1})$.
+  \item[Verification] \hfill \\
+    Given $(g_2^{x_1}, g_2^{x_2})$ and $(\sigma_1, \sigma_2)$,
+    verify that $\e(g_1^{o_i}, g_2^{x_i}) = \e(g_1, \sigma_i)~\forall i \in (1, 2)$.
+\end{description}
+
+\subsection{Encrypted Vectors}
+
+Given some bit-vector $\vec{x}$ describing the groups that have access to a
+resource and randomly chosen cryptographic parameters $\Ap$, we define $\Vv$
+as follows:
+\begin{align*}
+  \Vv &= (\eins_1(\Ap), \ein_1(\Ap, \vec{x}))
+\end{align*}
+
+Given some bit-vector $\vec{y}$ describing the groups that a consumer is in and
+randomly chosen cryptographic parameters $\Bp$, we define $\Pv$ and $\Sv$ as
+follows:
+\begin{align*}
+  \Pv &= \eins_2(\Bp) \\
+  \Sv &= \ein_2(\Bp, \vec{y}) \\
+\end{align*}
+
+\subsection{Key Generator}
+
+As described in \cref{sec:anon-crypto}, we allow the consumer to generate
+unlinkable key-pairs as follows.
+
+First, we define $\Pvg$ to be the tuple $(K_1, K_2, K_1^\prime, K_2^\prime)$
+(again with random $\Bp$ parameters):
+\begin{align*}
+  K_1 &= \ein_2(\Bp, \vec{b}) & K_2 &= \eins_2(\Bp) \\
+  K^\prime_1 &= \ein_2(\Bp^\prime, \vec{b}) & K^\prime_2 &= \eins_2(\Bp^\prime)
+\end{align*}
+
+We then define $\rand(\vec{r}, G, \HsigG(\Hp, G), \ldots)$ to output the tuple
+$(K^r_1, K^r_2, \sigma_i,\ldots)$ define as:
+\begin{align*}
+  K^r_1 &= \Pv &= \combine(r_1, r_2, K_1, K_1^\prime) \\
+  K^r_2 &= \Sv &= \combine(r_1, r_2, K_2, K_2^\prime) \\
+  \sigma_i &= \Hsig(\Hp_i, K^r_2) &= (K^r_2)^{\Hs_i}
+\end{align*}
+
+\subsection{Pre-Verification}
+\label{sec:pre-verify-define}
+
+We define the following method for pre-verifying access. This will spit out the
+size of the intersection $c$ if we have access. $c$ will be re-used in $\mProof$
+so hang onto it. We didn't explicitly mention this in \cref{chap:auth} because
+it's technically an optimization.
+
+Compute:
+\begin{align*}
+  \eouts(\ABp)          &= \pair(\eins_1(\Ap), \eins_2(\Bp)) \tag{1} \\
+                        &= \pair(C_2, K_2) \\
+  \eouts(c \cdot \ABp)  &= \eouts(\ABp \cdot \iprod{\vec{a}}{\vec{b}}) \tag{2} \\
+                        &= \pair(\ein_1(\Ap, \vec{a}), \ein_2(\Bp, \vec{b})) \\
+                        &= \pair(C_1, K_1) \\
+\end{align*}
+
+And then brute-force $c$ using $\combine$ as described in \cref{sec:auth-crypto-proto}.
+\begin{equation*}
+  \PreVerify(\Vv, \Pv, \Sv) = c ~~~~0 \rightarrow\text{no access}
+\end{equation*}
+
+\subsection{Challenge Generation}
+
+\begin{align*}
+  \mCv &= \Vv_1^s \\
+       &= \ein_1(s\cdot\Ap, \vec{a}) \\
+\pProof(\Vv, s, \Pv) &= \pair(\Vv_2^s,\,\Pv) \\
+      &= \pair(\eins(s\cdot \Ap),\,\eins_2(\Bp)) \\
+      &= \eouts(s\cdot \ABp)
+\end{align*}
+
+\subsection{Proof Generation}
+
+\begin{singlespace}
+Where $c$ is computed by $\PreVerify$ (\cref{sec:pre-verify-define}).
+\begin{align*}
+  \mProof( \\
+  &~~~~\Cv, \\
+  &~~~~c, \\
+  &~~~~\Sv \\
+  ) &= \pair(\Cv, \Sv)^{-c}
+\end{align*}
+\end{singlespace}
 
 %\section{Homomorphic Signature Scheme}
 %\label{sec:homo-sig}
@@ -2590,8 +2692,6 @@ TODO (Just map the functions together. Mindless bleh...
 %Finally, compute the new $o^\prime = o^{\frac{1}{\sum_{i}{c_i}}}$ where each
 %$c_i$ is a coefficient used in the linear combination produced in the previous
 %step. This way, $e(u_1, o)$ still equals $T$.
-
-\begin{appendices}
 
 \chapter{API}
 \label{chap:api}
@@ -2700,6 +2800,11 @@ authenticate(challenge, function(response) {
 
 Importantly, the server maintains no mutable state.
 
+\bibliographystyle{acm}
+\bibliography{thesis}
+
+\begin{appendices}
+
 \chapter{Proofs}
 
 \emph{Gandalf: Fly, you fools!}
@@ -2758,9 +2863,53 @@ intersection).
 
 {\hfill $\square$}
 
-\section{Homomorphic Signature}
+\section{Malleable Signature Scheme}
 
-TODO: Formalize our assumption and write this up.
+In DRACL, we use a malleable signature scheme that has the following property:
+Given a set of uniformly random vectors (unknown to the attacker) in exponents
+and a set of signatures on these vectors an attacker cannot forge a signature
+for a known vector in exponents. This is a very weak guarantee but it turns out
+it's all we need.
+
+Recall our signature scheme:
+\begin{description}
+  \item[Private Key] $(o_i, \ldots)$ (random)
+  \item[Public Key] $(g_1^{o_i}, \ldots)$
+  \item[Signing] \hfill \\
+    Given $(g_2^{x_i}, \ldots)$, produce a signature $(\sigma_i, \ldots) = (g_2^{x_i\cdot o_i}, \ldots)$.
+  \item[Verification] \hfill \\
+    Given $(g_2^{x_i}, \ldots)$ and $(\sigma_1, \ldots)$,
+    verify that $\e(g_1^{o_i}, g_2^{x_i}) = \e(g_1, \sigma_i)~\forall i$.
+\end{description}
+
+We prove this element-wise.
+
+\subsection{Assumption}
+
+It's hard to compute $g_1^{b}$ or $g_2^{b}$ given:
+\begin{align*}
+  g_1^a & g_1^{ab} \\
+  g_2^a & g_2^{ab} \\
+\end{align*}
+
+This is a variant of SXDH.
+
+\subsection{Theorem}
+
+Assume there exists a function $f$ that can take a set of valid value/signature
+pairs with unknown random values and spit out a signature and a known value. 
+
+Let, for some $x$, $o$, and $p$:
+\begin{align*}
+g_1^o = g_1^a & g_2^x = g_2^b & g_2^{xo} = g_2^{ab}
+\end{align*}
+
+$o$ is the private key, $(g_1^o, g_1)$ is the public key.
+
+We can generate as many signed elements as we want by raising $g_2^x$ and
+$g_2^{xo}$ to some power of our choice $r$. We pass all these elements to $f$
+which spits out $g_2^v$ and $g_2^{vo}$. We can now compute $g_2^{o}$ which
+violates our assumption. Therefore, $f$ cannot exist.
 
 \section{Security}
 \label{sec:crypto-sec}
@@ -2772,14 +2921,20 @@ key with a valid certificate.
 
 \subsection{Assumption}
 
-To prove security, we assume that computing $\e(g_1, g_2)^{abc}$ is hard given:
+To prove security, we assume that to compute $(\e(g_1, g_2)^{abc}, g_2^a)$ for
+some non-degenerate $a$ given:
 
 \begin{flalign*}
-g_1, g_1^a, g_1^b, g_1^c, g_1^{c^{-1}} \\
-g_2, g_2^a, g_2^b, g_2^c, g_2^{c^{-1}} \\
+g_1, g_1^b, g_1^{c^{-1}} \\
+g_2, g_2^c \\
 \end{flalign*}
 
-This is a variant on the standard SXDH assumption.
+One must know $a$.
+
+Another way of putting this is that, if there exists a function that can compute
+$(\e(g_1, g_2)^{abc}, g_2^a)$ given the variables above for some non-degenerate
+$a$ but not tell us what $a$ is, then there must exist an extractor function
+that can compute this \emph{and} tell us what $a$ is.
 
 \subsection{Theorem}
 
@@ -2807,11 +2962,11 @@ above and return a proof of access against the target ACL.
 
 There exists an efficient reduction from the security assumption to $f$:
 
-First, let:
+First, generate some random element in $g_2$ and call it $g_2^t$ (importantly we
+don't know $t$). Then, let:
 
 \begin{align*}
-  g_2^t &= g_2^a & g_1^{sq} &= g_1^b \\
-  g_2^{q^{-1}} &= g_2^c & g_1^{q} &= g_1^{c^{-1}}
+  g_1^{sq} &= g_1^b & g_2^{q^{-1}} &= g_2^c & g_1^{q} &= g_1^{c^{-1}}
 \end{align*}
 
 Then: \\
@@ -2864,13 +3019,14 @@ Then: \\
       K_1 &= \left(g_2^{-q}\right)^{\alpha\left(\sum_{\forall y_i \in \vec{y} | i \in \bar{\gamma}}{y_i\vec{b}_i}\right) + \tilde{\alpha}\left(\sum_{\forall y_i \in \vec{y} | i \in \bar{\gamma}}{y_i\vec{b}_i}\right)} \\
       & \times \left(g_2\right)^{\alpha\left(\sum_{\forall y_i \in \vec{y} | i \in \gamma}{y_i\vec{b}_i} + \vec{b}_{2n+1}\right) + \tilde{\alpha}\left(\sum_{\forall y_i \in \vec{y} | i \in \gamma}{y_i\vec{b^*}_{n+i}} + \vec{b}_{2n+3}\right)} \\
     \end{flalign*}
-  \item Then pick a random $o_1$ and $o_2$ as the homomorphic secret key for the
-    old epoch(s) and then generate the public key: $P = g_1^{(o_1,o_2)}$.
-  \item Finally, homomorphically sign the $K_2$'s for the old epoch(s) with the
-    old homomorphic keys:
+  \item Then pick a random $o_1$ and $o_2$ as the malleable signature scheme
+    secret key for the old epoch(s) and then generate the public key: $P =
+    g_1^{(o_1,o_2)}$.
+  \item Finally, malleable sign the $K_2$'s for the old epoch(s) with the
+    old malleable signature keys:
     \begin{flalign*}
-      \sigma(K_2) &= K_{2_1}^{o_1} \cdot K_{2_2}^{o_2} \\
-      \sigma(K_2^\prime) &= {K^\prime_{2_1}}^{o_1} \cdot {K^\prime_{2_2}}^{o_2}
+      \sigma(K_2) &= (K_{2_1}^{o_1}, K_{2_2}^{o_2}) \\
+      \sigma(K_2^\prime) &= ({K^\prime_{2_1}}^{o_1}, {K^\prime_{2_2}}^{o_2})
     \end{flalign*}
   \end{enumerate}
 
@@ -2885,63 +3041,53 @@ Then: \\
       {K_2^{\tau}}^\prime &= \left(g_2^t\right)^{\beta^\dagger\vec{d_1} + \tilde{\beta^\dagger}\vec{d_2}} \\
       {K_1^{\tau}}^\prime &= \left(g_2^t\right)^{\beta^\dagger\left(\sum_{y_i \in \vec{y}}{y_i\vec{b}_i} + \vec{b}_{2n+1}\right) + \tilde{\beta^\dagger}\left(\sum_{y_i \in \vec{y}}{y_i\vec{b}_i} + \vec{b}_{2n+3}\right)} \\
     \end{flalign*}
-  \item Then pick a random $o_1^\tau$ and $o_2^\tau$ as the homomorphic secret key for the
-    current epoch and then generate the public key: $P^\tau = g_1^{(o_1^\tau,o_2^\tau)}$.
-  \item Finally, homomorphically sign the $K_2^\tau$'s for the current epoch:
+  \item Then pick a random $o_1^\tau$ and $o_2^\tau$ as the malleable signature
+    secret key for the current epoch and then generate the public key: $P^\tau =
+    g_1^{(o_1^\tau,o_2^\tau)}$.
+  \item Finally, sign the $K_2^\tau$'s with the malleable signature keys for the current epoch:
     \begin{flalign*}
-      \sigma({K_2^{\tau}}) &= {K^{\tau}}_{2_1}^{o_1} \cdot {K^{\tau}}_{2_2}^{o_2} \\
-      \sigma({K_2^{\tau}}^\prime) &= {{K^{\tau}}^\prime_{2_1}}^{o_1} \cdot {{K^{\tau}}^\prime_{2_2}}^{o_2}
+      \sigma({K_2^{\tau}}) &= ({K^{\tau}}_{2_1}^{o_1}, {K^{\tau}}_{2_2}^{o_2}) \\
+      \sigma({K_2^{\tau}}^\prime) &= ({{K^{\tau}}^\prime_{2_1}}^{o_1}, {{K^{\tau}}^\prime_{2_2}}^{o_2})
     \end{flalign*}
   \end{enumerate}
 \end{enumerate}
 
 We feed all $K_1$'s and $K_2$'s, all $C_1$'s and $C_2$'s, all challenges ($C_s$,
-$C_{s^\prime}$), the homomorphic public keys ($P$), and the signatures on
-$K_2$'s from the all epochs ($\sigma(K_2$).
+$C_{s^\prime}$), the malleable signature public keys ($P$), and the signatures on
+$K_2$'s from the all epochs ($\sigma(K_2$) into $f$.
 
-To break our scheme, $f$ would have to produce $R = \e(g_1, g_2)^{s \cdot
-  \iprod{(\alpha, \tilde{\alpha})}{\vec{z}}}$, and some
-$K^{(\mathit{target})}_{2} = (g_2)^{\vec{z}}$ where $\vec{z}$ is some length two
-vector. Additionally, it would have to signature $\sigma_k =
+To break our scheme, $f$ would have to produce (where $\vec{z}$ is some length two vector):
+\begin{align*}
+  K^{(\mathit{target})}_{2} &= (g_2)^{\vec{z}} \\
+  R &= \e(C_1, K^{(\mathit{target})}_{2})^s
+\end{align*}
+
+Additionally, it would have to signature $\sigma_k =
 \sigma(K^{(\mathit{target})}_2)$ such that $\e(K^{(\mathit{target})}_2, P^\tau)
 == \sigma_k$ (i.e., the signature verifies).
 
-Recall that, given the homomorphic signature scheme we're using, it's
-computationally infeasible to compute a signature on a vector though any means
-other than taking linear combinations of existing vectors signed by the same
-key. Therefore, $f$ must have produced $K^{(\mathit{target})}_{2} $ and
-$\sigma_k$ by taking linear combinations of some set of $K_2^\tau$'s from the
-current epoch.
-
-Therefore, if $f$ exists, there must exist some function $f^\prime$ that take
-the same parameters as $f$, and, instead of yielding $\sigma_k$ and the
-signature on it directly, yields the set of linear combinations that was used to
-produce $\sigma_k$ and the signature.
-
-So, instead of reducing to $f$, we reduce to $f^\prime$.
-
-Also recall that all $K_2^\tau$'s have a $t$ in the exponent. This means that,
-for some $\vec{z^\prime}$:
+WLOG, we can factor $K_2^{\mathit{(target)}}$ and $R$ into the form:
 \begin{align*}
-  K_2^{(\mathit{target})} &= (g_2)^{\vec{z}} \\
-                     &= (g_2^t)^{\vec{z^\prime}}
-\end{align*}
-This also means that:
-\begin{align*}
-  R &= \e(g_1, g_2)^{s \cdot \iprod{(\alpha, \tilde{\alpha})}{\vec{z}}} \\
-    &= \e(g_1, g_2)^{st \cdot \iprod{(\alpha, \tilde{\alpha})}{\vec{z^\prime}}}
+  K_2^{\mathit{(target)}} &= g_2^{z_1 \vec{d}_1^* + z_2 \vec{d}_2^*} & \text{$\vec{d}_1^*$ and $\vec{d}_2^*$ form a basis} \\
+  R &= \e(g_1, g_2)^{s \cdot (\alpha z_1 + \tilde{\alpha} z_2)} \\
 \end{align*}
 
-Given that we know the linear combination of $K_2^\tau$'s that went into
-$K_2^{(\mathit{target})}$ and we chose all the components in the exponent of
-these $K_2^\tau$'s \emph{except} for $t$, we can trivially compute
-$\vec{z^\prime}$. Additionally, we also know all the $\alpha$ and
-$\tilde{\alpha}$ parameters that went into this black box so we can brute force
-$(\alpha, \tilde{\alpha})$ in polynomial time. Therefore, we can compute
-$\iprod{(\alpha, \tilde{\alpha})}{\vec{z^\prime}}$ and remove it from the
-exponent of $R$. This leaves us with $\e(g_1, g_2)^{st}$ which is the same thing
-as $\e(g_1, g_2)^{st}$. However, this violates our original assumption so the
-function $f^\prime$ cannot exist. This, in turn, means that $f$ cannot exist.
+Given that we know $\alpha$, $\tilde{\alpha}$, $\vec{d_1^*}$, and $\vec{d_2^*}$
+(we chose them), we can solve for $g_2^{\alpha z_1 + \tilde{\alpha} z_2}$
+(without needing to know the $z$'s). With $a = \alpha z_1 + \tilde{\alpha} z_2$,
+we now have $\e(g_1, g_2)^{abc}$ (recall $b = sq$ and $c=q^{-1}$) and $g_2^a$
+for some $a$.
+
+However, we can't possibly know the value of $a$. Recall that, given the
+malleable signature scheme we're using, it's computationally infeasible to
+compute a signature on a chosen vector. Given that we don't know the exponents
+of the vectors we signed with $P^\tau$, we cannot produce a vector signed with
+$P^\tau$ with known exponents. Therefore, regardless of the vector that $f$
+returns, if $P^\tau$ verifies, we (the reduction and $f$) are guaranteed to not
+know the exponents. Therefore, we're guaranteed to not know $(z_1, z_2)$ which,
+in turn, means we can't know $a$.
+
+However, this violates our assumption so $f$ cannot exist.
 
 {\hfill $\square$}
 
@@ -3270,14 +3416,14 @@ by the producer).
 \subsubsection{\texttt{ChallengeResponseBody}}
 \label{struct:challenge_response_body}
 
+The statement to HMAC as a Challenge Response.
+
 \begin{leftbar}
 \begin{description}
 \item[\texttt{type}] \verb="challenge\_response\_body"=
 \item[\texttt{origin}] \texttt{string} \\
   The server from which this request originated (authenticated by a secure
   channel such as TLS). This allows the server to detect MITM attacks.
-\item[\texttt{crypto\_response\_v1}] \texttt{bytes} \\ 
-  The actual challenge as defined by the crypto protocol.
 \item[\texttt{user\_data}] \texttt{any} \\
   The extra data included in the challenge from this response was generated.
 \end{description}
@@ -3286,28 +3432,35 @@ by the producer).
 \subsubsection{\texttt{ChallengeResponse}}
 \label{struct:challenge_response}
 
-TODO authenticated...
+The actual HMACed message.
 
 \begin{leftbar}
 \begin{description}
 \item[\texttt{type}] \verb="challenge\_response"=
-\item[\texttt{}] \texttt{bytes} \\ 
-  The actual challenge as defined by the crypto protocol.
-\item[\texttt{user\_data}] \texttt{any} \\
-  The extra data included in the challenge from this response was generated.
+\item[\texttt{challenge\_response\_body}] \texttt{bytes} \\ 
+  The body of the challenge response as bytes.
+\item[\texttt{hmac\_v1}] \texttt{bytes} \\ 
+  The HMAC. See \cref{chap:auth}.
 \end{description}
 \end{leftbar}
 
 \section{Crypto Internals}
 \label{sec:crypto-spec}
 
-TODO: Explain encoding for the ``crypto'' parts. We store them as raw bytes and
-decode them manually for ultimate storage efficiency.
+Here we specify some of the cryptographic detail's we've omitted previously.
+
+We use bn256~\cite{bn256} as our pairing function, SHA256 as our HMAC function,
+and NaCl's\cite{nacl} \texttt{secretbox} for symmetric encryption.
+
+When transmitting cryptographic material, define the format to be a simple
+concatenation of all the (fix-sized) fields in the order in which they are
+described in \cref{chap:crypto}. In the future, it would be a good idea to
+define a precise format but this format must be extremely efficient.
+
+An implementer should follow the protocol described in \cref{chap:auth} (using
+the crypto we've defined in \cref{chap:crypto}.
 
 \end{appendices}
-
-\bibliographystyle{acm}
-\bibliography{thesis}
 
 \end{document}
 % vim: set foldmethod=marker: %
